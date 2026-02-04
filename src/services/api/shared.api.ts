@@ -13,12 +13,15 @@ export interface LoginRequest {
   username: string;
   password: string;
   metadatosNavegadorCanal?: {
-    canalDigital?: string;
+    sistemaOperativo?: string;
+    versionSistemaOperativo?: string;
+    idiomaDispositivo?: string;
+    marcaDispositivo?: string;
+    modeloDispositivo?: string;
     tipoDispositivo?: string;
     userAgent?: string;
-    idioma?: string;
-    plataforma?: string;
-    versionAplicacion?: string;
+    canalDigital?: string;
+    fechaRecopilacion?: string;
     [key: string]: string | undefined;
   };
 }
@@ -164,33 +167,36 @@ export function shouldLogoutOn403(errorData: ApiError): boolean {
 }
 
 /**
- * Collects device metadata for authentication request
+ * Collects device metadata for authentication request.
+ * Follows the same format as coopesanramon / coopesanramon-token (MetadatosDispositivo).
  */
 function getDeviceMetadata(): LoginRequest['metadatosNavegadorCanal'] {
-  const deviceType = Device.deviceType || 'unknown';
   let tipoDispositivo: string;
-  
-  switch (deviceType) {
+
+  switch (Device.deviceType) {
     case Device.DeviceType.PHONE:
-      tipoDispositivo = 'mobile';
+      tipoDispositivo = 'PHONE';
       break;
     case Device.DeviceType.TABLET:
-      tipoDispositivo = 'tablet';
+      tipoDispositivo = 'TABLET';
       break;
     default:
-      tipoDispositivo = 'mobile';
+      tipoDispositivo = 'PHONE';
   }
 
   const locales = Localization.getLocales();
-  const locale = locales && locales.length > 0 ? locales[0].languageTag : 'es-CR';
+  const idioma = locales && locales.length > 0 ? locales[0].languageTag : 'es-CR';
 
   const metadata: LoginRequest['metadatosNavegadorCanal'] = {
-    canalDigital: 'Mobile',
+    sistemaOperativo: Device.osName || 'Unknown',
+    versionSistemaOperativo: Device.osVersion || 'Unknown',
+    idiomaDispositivo: idioma,
+    marcaDispositivo: Device.manufacturer || 'Unknown',
+    modeloDispositivo: Device.modelName || 'Unknown',
     tipoDispositivo,
-    userAgent: `${Device.manufacturer || 'Unknown'} ${Device.modelName || 'Device'}`,
-    idioma: locale,
-    plataforma: Device.osName || 'unknown',
-    versionAplicacion: Application.nativeApplicationVersion || '1.0.0',
+    userAgent: `${Device.manufacturer || 'Unknown'} ${Device.modelName || 'Device'} ${Device.osName || 'OS'}/${Device.osVersion || '0'}`,
+    canalDigital: 'Mobile',
+    fechaRecopilacion: new Date().toISOString(),
   };
 
   return metadata;
@@ -216,9 +222,10 @@ export async function login(
   // Prepare headers with device information
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
-    'X-Device-Type': metadatosNavegadorCanal?.tipoDispositivo || 'mobile',
-    'X-App-Version': metadatosNavegadorCanal?.versionAplicacion || '1.0.0',
+    'X-Device-Type': metadatosNavegadorCanal?.tipoDispositivo || 'PHONE',
+    'X-App-Version': Application.nativeApplicationVersion || '1.0.0',
     'X-Platform': 'mobile',
+    'Accept-Language': metadatosNavegadorCanal?.idiomaDispositivo || 'es-CR',
   };
 
   const response = await fetch(`${API_BASE_URL}/api/Auth/token`, {
