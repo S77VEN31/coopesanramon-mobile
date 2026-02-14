@@ -7,6 +7,7 @@ import { getTextColor, getSecondaryTextColor } from '../../../App';
 interface ContentCardProps {
   title?: string;
   description?: string;
+
   children: React.ReactNode;
   className?: any;
   contentClassName?: any;

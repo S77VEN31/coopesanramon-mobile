@@ -9,7 +9,7 @@ export const FAVORITE_TYPE_LABELS: Record<FavoriteType, string> = {
 export const FAVORITE_TEXTS = {
   PAGE_TITLE: 'Cuentas Favoritas',
   ADD_BUTTON: '+ Agregar',
-  SEARCH_PLACEHOLDER: 'Buscar por nombre, cuenta o alias...',
+  SEARCH_PLACEHOLDER: 'Buscar favoritos',
   EMPTY_LIST: 'No hay cuentas favoritas registradas',
   EMPTY_SEARCH: 'No se encontraron resultados',
 

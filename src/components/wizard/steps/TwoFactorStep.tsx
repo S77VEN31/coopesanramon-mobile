@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, useColorScheme } from 'react-native';
-import { KeyRound, Mail, AlertCircle, TimerOff } from 'lucide-react-native';
+import { View, Text, StyleSheet, useColorScheme } from 'react-native';
+import { KeyRound, Mail, TimerOff } from 'lucide-react-native';
 import { OTPInput } from '@/components/ui/OTPInput';
 import { Button } from '@/components/ui/Button';
 import MessageCard from '@/components/cards/MessageCard';
 import { requiresOtp, requiresEmail, formatTimeRemaining } from '@/lib/states/secondFactor.store';
 import { getTextColor, getSecondaryTextColor, getBorderColor, getCardBgColor } from '../../../../App';
+import { useSecondFactorStore } from '@/lib/states/secondFactor.store';
 import type { CreateChallengeResponse } from '@/services/api/secondFactor.api';
 
 interface TwoFactorStepProps {
@@ -48,12 +49,12 @@ export default function TwoFactorStep({
 
   if (isCreatingChallenge) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#a61612" />
-        <Text style={[styles.loadingText, { color: textColor }]}>
-          Creando desafío de seguridad...
-        </Text>
-      </View>
+      <MessageCard
+        type="loading"
+        message="Creando desafío de seguridad..."
+        description="Por favor espera mientras se genera tu código de verificación."
+        style={[styles.messageCard, { borderColor, backgroundColor: getCardBgColor(colorScheme) }]}
+      />
     );
   }
 
@@ -63,30 +64,30 @@ export default function TwoFactorStep({
         type="error"
         message="Error en la Operación"
         description={operationError}
-        style={[styles.expiredCard, { borderColor, backgroundColor: getCardBgColor(colorScheme) }]}
+        style={[styles.messageCard, { borderColor, backgroundColor: getCardBgColor(colorScheme) }]}
       />
     );
   }
 
   if (currentChallenge && (currentChallenge.retosSolicitados === null || currentChallenge.retosSolicitados.length === 0)) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#a61612" />
-        <Text style={[styles.loadingText, { color: textColor }]}>
-          Procesando operación...
-        </Text>
-      </View>
+      <MessageCard
+        type="loading"
+        message="Procesando operación..."
+        description="Esto puede tomar unos segundos."
+        style={[styles.messageCard, { borderColor, backgroundColor: getCardBgColor(colorScheme) }]}
+      />
     );
   }
 
   if (!currentChallenge) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#a61612" />
-        <Text style={[styles.loadingText, { color: textColor }]}>
-          Preparando verificación...
-        </Text>
-      </View>
+      <MessageCard
+        type="loading"
+        message="Preparando verificación..."
+        description="Configurando el proceso de verificación."
+        style={[styles.messageCard, { borderColor, backgroundColor: getCardBgColor(colorScheme) }]}
+      />
     );
   }
 
@@ -103,7 +104,7 @@ export default function TwoFactorStep({
           description={isAttemptsExhausted
             ? 'Has agotado todos los intentos disponibles para validar el código de seguridad.'
             : 'El tiempo para ingresar el código de seguridad ha expirado.'}
-          style={[styles.expiredCard, { borderColor, backgroundColor: getCardBgColor(colorScheme) }]}
+          style={[styles.messageCard, { borderColor, backgroundColor: getCardBgColor(colorScheme) }]}
         />
         {onRetryChallenge && (
           <Button
@@ -116,6 +117,33 @@ export default function TwoFactorStep({
             Solicitar Nuevo Código
           </Button>
         )}
+      </View>
+    );
+  }
+
+  if (validationError) {
+    const handleClearValidationError = () => {
+      useSecondFactorStore.setState({ validationError: null, validationErrorRaw: null });
+      onOtpCodeChange('');
+      onEmailCodeChange('');
+    };
+
+    return (
+      <View style={styles.container}>
+        <MessageCard
+          type="error"
+          message="Error de Validación"
+          description={validationError}
+          style={[styles.messageCard, { borderColor, backgroundColor: getCardBgColor(colorScheme) }]}
+        />
+        <Button
+          variant="default"
+          size="sm"
+          onPress={handleClearValidationError}
+          style={styles.retryButton}
+        >
+          Intentar Nuevamente
+        </Button>
       </View>
     );
   }
@@ -138,13 +166,6 @@ export default function TwoFactorStep({
           </Text>
         </View>
       </View>
-
-      {validationError && (
-        <View style={[styles.alertContainer, { borderColor, backgroundColor: colorScheme === 'dark' ? '#991b1b20' : '#fee2e2' }]}>
-          <AlertCircle size={16} color="#991b1b" />
-          <Text style={[styles.alertText, { color: '#991b1b' }]}>{validationError}</Text>
-        </View>
-      )}
 
       {/* Code Inputs */}
       <View style={styles.codesContainer}>
@@ -194,16 +215,6 @@ const styles = StyleSheet.create({
   container: {
     paddingTop: 8,
   },
-  loadingContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 32,
-    gap: 16,
-  },
-  loadingText: {
-    fontSize: 14,
-    textAlign: 'center',
-  },
   statsContainer: {
     flexDirection: 'row',
     borderRadius: 12,
@@ -227,19 +238,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
   },
-  alertContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    padding: 12,
-    marginBottom: 12,
-  },
-  alertText: {
-    fontSize: 14,
-    flex: 1,
-  },
   codesContainer: {
     gap: 16,
   },
@@ -260,7 +258,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
   },
-  expiredCard: {
+  messageCard: {
     borderWidth: 1,
     borderRadius: 12,
     flex: 0,

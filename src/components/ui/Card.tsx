@@ -60,9 +60,8 @@ interface CardDescriptionProps {
 }
 
 export const CardDescription: React.FC<CardDescriptionProps> = ({ children, style, colorScheme = 'light' }) => {
-  const secondaryTextColor = getSecondaryTextColor(colorScheme);
   return (
-    <Text style={[styles.cardDescription, { color: secondaryTextColor }, style]}>
+    <Text style={[styles.cardDescription, { color: '#ffffff' }, style]}>
       {children}
     </Text>
   );
@@ -99,7 +98,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   cardDescription: {
-    fontSize: 14,
+    fontSize: 16,
     textAlign: 'center',
   },
 });

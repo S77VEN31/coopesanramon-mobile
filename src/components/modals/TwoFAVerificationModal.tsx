@@ -4,9 +4,10 @@ import { useSecondFactorStore, requiresOtp, requiresEmail, formatTimeRemaining }
 import { TipoDesafio } from '@/services/api';
 import { OTPInput } from '../ui/OTPInput';
 import { Button } from '../ui/Button';
-import { AlertCircle, KeyRound, Mail, TimerOff } from 'lucide-react-native';
+import { KeyRound, Mail, TimerOff } from 'lucide-react-native';
 import { getCardBackgroundColor, getTextColor, getSecondaryTextColor, getBorderColor } from '../../../App';
 import { useColorScheme } from 'react-native';
+import MessageCard from '../cards/MessageCard';
 
 interface TwoFAVerificationModalProps {
   title?: string;
@@ -118,34 +119,53 @@ export default function TwoFAVerificationModal({
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
               {showOperationError ? (
                 <View style={styles.contentContainer}>
-                  <View style={[styles.errorContainer, { borderColor, backgroundColor: colorScheme === 'dark' ? '#991b1b20' : '#fee2e2' }]}>
-                    <View style={[styles.iconCircle, { backgroundColor: colorScheme === 'dark' ? '#991b1b40' : '#fee2e2' }]}>
-                      <AlertCircle size={32} color="#991b1b" />
-                    </View>
-                    <Text style={[styles.errorTitle, { color: textColor }]}>Error en la Operación</Text>
-                    <Text style={[styles.errorMessage, { color: secondaryTextColor }]}>{operationError}</Text>
-                  </View>
+                  <MessageCard
+                    type="error"
+                    message="Error en la Operación"
+                    description={operationError!}
+                    style={styles.messageCard}
+                  />
                   <View style={styles.buttonRow}>
-                    <Button onPress={closeModal} style={styles.fullWidthButton}>
-                      Cerrar
+                    <Button
+                      onPress={handleRetryChallenge}
+                      disabled={isCreatingChallenge}
+                      loading={isCreatingChallenge}
+                      style={styles.fullWidthButton}
+                    >
+                      Intentar Nuevamente
+                    </Button>
+                  </View>
+                </View>
+              ) : validationError ? (
+                <View style={styles.contentContainer}>
+                  <MessageCard
+                    type="error"
+                    message="Error de Validación"
+                    description={validationError}
+                    style={styles.messageCard}
+                  />
+                  <View style={styles.buttonRow}>
+                    <Button
+                      onPress={handleRetryChallenge}
+                      disabled={isCreatingChallenge}
+                      loading={isCreatingChallenge}
+                      style={styles.fullWidthButton}
+                    >
+                      Intentar Nuevamente
                     </Button>
                   </View>
                 </View>
               ) : (isChallengeExpired || isAttemptsExhausted) ? (
                 <View style={styles.contentContainer}>
-                  <View style={[styles.errorContainer, { borderColor, backgroundColor: colorScheme === 'dark' ? '#991b1b20' : '#fee2e2' }]}>
-                    <View style={[styles.iconCircle, { backgroundColor: colorScheme === 'dark' ? '#991b1b40' : '#fee2e2' }]}>
-                      <TimerOff size={32} color="#991b1b" />
-                    </View>
-                    <Text style={[styles.errorTitle, { color: textColor }]}>
-                      {isChallengeExpired ? 'Tiempo Expirado' : 'Intentos Agotados'}
-                    </Text>
-                    <Text style={[styles.errorMessage, { color: secondaryTextColor }]}>
-                      {isChallengeExpired
-                        ? 'El tiempo para completar la verificación ha expirado. Por favor, intenta nuevamente.'
-                        : 'Has agotado todos los intentos disponibles. Por favor, intenta nuevamente.'}
-                    </Text>
-                  </View>
+                  <MessageCard
+                    type="error"
+                    icon={TimerOff}
+                    message={isChallengeExpired ? 'Tiempo Expirado' : 'Intentos Agotados'}
+                    description={isChallengeExpired
+                      ? 'El tiempo para completar la verificación ha expirado. Por favor, intenta nuevamente.'
+                      : 'Has agotado todos los intentos disponibles. Por favor, intenta nuevamente.'}
+                    style={styles.messageCard}
+                  />
                   <View style={styles.buttonRow}>
                     <Button
                       onPress={handleRetryChallenge}
@@ -185,22 +205,6 @@ export default function TwoFAVerificationModal({
                       </Text>
                     </View>
                   </View>
-
-                  {timeRemaining === 0 && (
-                    <View style={[styles.alertContainer, { borderColor, backgroundColor: colorScheme === 'dark' ? '#991b1b20' : '#fee2e2' }]}>
-                      <AlertCircle size={16} color="#991b1b" />
-                      <Text style={[styles.alertText, { color: '#991b1b' }]}>
-                        El tiempo para completar la verificación ha expirado.
-                      </Text>
-                    </View>
-                  )}
-
-                  {validationError && (
-                    <View style={[styles.alertContainer, { borderColor, backgroundColor: colorScheme === 'dark' ? '#991b1b20' : '#fee2e2' }]}>
-                      <AlertCircle size={16} color="#991b1b" />
-                      <Text style={[styles.alertText, { color: '#991b1b' }]}>{validationError}</Text>
-                    </View>
-                  )}
 
                   {/* Code Inputs */}
                   <View style={styles.codesContainer}>
@@ -261,8 +265,8 @@ export default function TwoFAVerificationModal({
                   </View>
                 </View>
               )}
-            </ScrollView>
-          </View>
+              </ScrollView>
+            </View>
         </Pressable>
       </Pressable>
     </Modal>
@@ -334,19 +338,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
   },
-  alertContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    padding: 12,
-    marginBottom: 16,
-  },
-  alertText: {
-    fontSize: 14,
-    flex: 1,
-  },
   codesContainer: {
     gap: 24,
     marginBottom: 24,
@@ -379,31 +370,11 @@ const styles = StyleSheet.create({
   halfWidthButton: {
     flex: 1,
   },
-  errorContainer: {
-    borderRadius: 12,
-    borderWidth: 2,
-    padding: 24,
-    alignItems: 'center',
+  messageCard: {
+    flex: 0,
+    minHeight: 0,
+    paddingVertical: 24,
     marginBottom: 24,
-  },
-  iconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  errorTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  errorMessage: {
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
   },
 });
 
