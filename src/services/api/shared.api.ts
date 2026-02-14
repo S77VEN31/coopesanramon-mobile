@@ -203,6 +203,16 @@ function getDeviceMetadata(): LoginRequest['metadatosNavegadorCanal'] {
   return metadata;
 }
 
+async function getPublicIp(): Promise<string> {
+  try {
+    const response = await fetch('https://api.ipify.org?format=json');
+    const data = await response.json();
+    return data.ip || '';
+  } catch {
+    return '';
+  }
+}
+
 /**
  * Login function with mobile device metadata
  */
@@ -210,8 +220,13 @@ export async function login(
   username: string,
   password: string
 ): Promise<TokenResponse> {
-  // Collect device metadata
+  // Collect device metadata and public IP
   const metadatosNavegadorCanal = getDeviceMetadata();
+  const publicIp = await getPublicIp();
+
+  if (publicIp && metadatosNavegadorCanal) {
+    metadatosNavegadorCanal.browserIp = publicIp;
+  }
 
   const requestBody: LoginRequest = {
     grantType: 'password',

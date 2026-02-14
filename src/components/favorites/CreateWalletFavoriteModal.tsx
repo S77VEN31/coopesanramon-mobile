@@ -1,0 +1,376 @@
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { Modal, View, Text, TouchableWithoutFeedback, StyleSheet, useColorScheme, TouchableOpacity, Keyboard } from 'react-native';
+import { X } from 'lucide-react-native';
+import TransferWizard from '@/components/wizard/TransferWizard';
+import MessageCard from '@/components/cards/MessageCard';
+import { TwoFactorStep, WalletSearchStep, FavoriteDataStep } from '@/components/wizard/steps';
+import { useFavoriteWalletsStore } from '@/lib/states/favoriteWallets.store';
+import { useSecondFactorStore, requiresOtp, requiresEmail } from '@/lib/states/secondFactor.store';
+import { TipoOperacion } from '@/constants/enums';
+import { FAVORITE_TEXTS } from '@/constants/favorite-accounts.constants';
+import { getCardBackgroundColor, getTextColor, getSecondaryTextColor, getBorderColor, getCardBgColor } from '../../../App';
+
+export default function CreateWalletFavoriteModal() {
+  const colorScheme = useColorScheme();
+  const backgroundColor = getCardBackgroundColor(colorScheme);
+  const textColor = getTextColor(colorScheme);
+  const secondaryTextColor = getSecondaryTextColor(colorScheme);
+  const borderColor = getBorderColor(colorScheme);
+
+  const {
+    isCreateModalOpen,
+    closeCreateModal,
+    destinationWallet,
+    isLoadingDestination,
+    destinationError,
+    searchDestinationWallet,
+    createFavoriteWallet,
+    clearDestinationWallet,
+  } = useFavoriteWalletsStore();
+
+  const {
+    currentChallenge,
+    isCreatingChallenge,
+    isValidating,
+    isExecutingOperation,
+    validationError,
+    operationError,
+    remainingAttempts,
+    timeRemaining,
+    createdesafio,
+    validatedesafio,
+    resetState: reset2FAState,
+    startCountdown,
+    stopCountdown,
+  } = useSecondFactorStore();
+
+  const [phone, setPhone] = useState('');
+  const [unmaskedPhone, setUnmaskedPhone] = useState('');
+  const [alias, setAlias] = useState('');
+  const [email, setEmail] = useState('');
+  const [montoMaximo, setMontoMaximo] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [emailCode, setEmailCode] = useState('');
+  const [has2FAStepBeenInitialized, setHas2FAStepBeenInitialized] = useState(false);
+  const [operationComplete, setOperationComplete] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const searchedPhoneRef = useRef<string | null>(null);
+
+  const resetForm = () => {
+    setPhone('');
+    setUnmaskedPhone('');
+    setAlias('');
+    setEmail('');
+    setMontoMaximo('');
+    setOtpCode('');
+    setEmailCode('');
+    setHas2FAStepBeenInitialized(false);
+    setOperationComplete(false);
+    setIsProcessing(false);
+    searchedPhoneRef.current = null;
+    clearDestinationWallet();
+    reset2FAState();
+  };
+
+  const handleClose = () => {
+    resetForm();
+    closeCreateModal();
+  };
+
+  const handleSearch = async () => {
+    if (unmaskedPhone.length < 8) return;
+    if (isLoadingDestination) return;
+    if (destinationWallet) return;
+    if (searchedPhoneRef.current === unmaskedPhone) return;
+    searchedPhoneRef.current = unmaskedPhone;
+    await searchDestinationWallet(unmaskedPhone);
+  };
+
+  const handleWizardComplete = async () => {
+    if (!currentChallenge) return;
+
+    setIsProcessing(true);
+
+    const hasRequiredChallenges = currentChallenge?.retosSolicitados !== null && currentChallenge?.retosSolicitados !== undefined && currentChallenge.retosSolicitados.length > 0;
+
+    if (!hasRequiredChallenges) {
+      await handleCreateWallet(null);
+      return;
+    }
+
+    const finalOtp = requiresOtp(currentChallenge?.retosSolicitados || null) ? otpCode : undefined;
+    const finalEmail = requiresEmail(currentChallenge?.retosSolicitados || null) ? emailCode : undefined;
+
+    const isValid = await validatedesafio(finalOtp, finalEmail);
+
+    if (isValid) {
+      await handleCreateWallet(currentChallenge?.idDesafioPublico || null);
+    } else {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleCreateWallet = async (idDesafio: string | null) => {
+    try {
+      await createFavoriteWallet({
+        monedero: unmaskedPhone,
+        email: email || null,
+        alias: alias || null,
+        montoMaximo: montoMaximo ? parseFloat(montoMaximo) : null,
+        idDesafio: idDesafio,
+      });
+      setIsProcessing(false);
+      setOperationComplete(true);
+    } catch (error) {
+      setIsProcessing(false);
+    }
+  };
+
+  const handlePhoneChange = (masked: string, unmasked: string) => {
+    setPhone(masked);
+    setUnmaskedPhone(unmasked);
+    searchedPhoneRef.current = null;
+    clearDestinationWallet();
+  };
+
+  const handleRetryChallenge = () => {
+    setOtpCode('');
+    setEmailCode('');
+    reset2FAState();
+    setHas2FAStepBeenInitialized(false);
+  };
+
+  const handlePhoneBlur = async () => {
+    if (unmaskedPhone.length === 8 && !destinationWallet) {
+      await handleSearch();
+    }
+  };
+
+  // Escuchar cuando el teclado se oculta (botón atrás)
+  useEffect(() => {
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      if (unmaskedPhone.length === 8 && !destinationWallet && !isLoadingDestination) {
+        handleSearch();
+      }
+    });
+
+    return () => {
+      keyboardDidHideListener.remove();
+    };
+  }, [unmaskedPhone, destinationWallet, isLoadingDestination]);
+
+  // Crear el desafío 2FA automáticamente cuando se necesite
+  useEffect(() => {
+    if (isCreateModalOpen && !currentChallenge && !isCreatingChallenge && !has2FAStepBeenInitialized && destinationWallet && alias !== undefined) {
+      setHas2FAStepBeenInitialized(true);
+      createdesafio(TipoOperacion.CreacionMonederoFavorito).then((challenge) => {
+        if (challenge && challenge.tiempoExpiracionSegundos != null && challenge.tiempoExpiracionSegundos > 0) {
+          startCountdown();
+        }
+      });
+    }
+  }, [isCreateModalOpen, currentChallenge, isCreatingChallenge, has2FAStepBeenInitialized, destinationWallet, alias, createdesafio, startCountdown]);
+
+  // Cleanup countdown when modal closes
+  useEffect(() => {
+    if (!isCreateModalOpen) {
+      stopCountdown();
+    }
+  }, [isCreateModalOpen, stopCountdown]);
+
+  const wizardSteps = useMemo(() => [
+    {
+      id: 'search',
+      title: FAVORITE_TEXTS.STEP_SEARCH,
+      component: (
+        <View style={styles.stepContent}>
+          <WalletSearchStep
+            phone={phone}
+            onPhoneChange={handlePhoneChange}
+            onClear={clearDestinationWallet}
+            onBlur={handlePhoneBlur}
+            onSearch={handleSearch}
+            isLoading={isLoadingDestination}
+            validatedWallet={destinationWallet}
+            error={destinationError}
+            searchLabel={FAVORITE_TEXTS.SEARCH_PHONE_LABEL}
+          />
+        </View>
+      ),
+      canGoNext: () => !!destinationWallet,
+      fallbackButton: {
+        label: 'Cerrar',
+        onPress: handleClose,
+        show: () => !!destinationError,
+      },
+    },
+    {
+      id: 'data',
+      title: FAVORITE_TEXTS.STEP_DATA,
+      component: (
+        <View style={styles.stepContent}>
+          <FavoriteDataStep
+            alias={alias}
+            onAliasChange={setAlias}
+            email={email}
+            onEmailChange={setEmail}
+            maxAmount={montoMaximo}
+            onMaxAmountChange={setMontoMaximo}
+            aliasLabel={FAVORITE_TEXTS.FIELD_ALIAS}
+            aliasPlaceholder="Ej: Mi SINPE Movil"
+            emailLabel={FAVORITE_TEXTS.FIELD_EMAIL}
+            emailPlaceholder="correo@ejemplo.com"
+            maxAmountLabel={FAVORITE_TEXTS.FIELD_MAX_AMOUNT}
+            maxAmountPlaceholder="0.00"
+          />
+        </View>
+      ),
+      canGoNext: () => true,
+      onLeave: () => {
+        setAlias('');
+        setEmail('');
+        setMontoMaximo('');
+      },
+    },
+    {
+      id: 'verification',
+      title: 'Verificación de Seguridad',
+      component: (
+        <View style={styles.verificationContent}>
+          {operationComplete ? (
+            <MessageCard
+              type="success"
+              message={FAVORITE_TEXTS.SUCCESS_CREATE}
+              style={[styles.messageCard, { borderColor, backgroundColor: getCardBgColor(colorScheme) }]}
+            />
+          ) : isProcessing ? (
+            <MessageCard
+              type="loading"
+              message="Procesando operación..."
+              description="Por favor espera mientras se completa la verificación"
+              style={[styles.messageCard, { borderColor, backgroundColor: getCardBgColor(colorScheme) }]}
+            />
+          ) : (
+            <TwoFactorStep
+              currentChallenge={currentChallenge}
+              isCreatingChallenge={isCreatingChallenge}
+              isValidating={isValidating}
+              isExecutingOperation={isExecutingOperation}
+              validationError={validationError}
+              operationError={operationError}
+              remainingAttempts={remainingAttempts}
+              timeRemaining={timeRemaining}
+              otpCode={otpCode}
+              emailCode={emailCode}
+              onOtpCodeChange={setOtpCode}
+              onEmailCodeChange={setEmailCode}
+              onRetryChallenge={handleRetryChallenge}
+              isRetrying={isCreatingChallenge}
+            />
+          )}
+        </View>
+      ),
+      hideNavigation: () => isProcessing,
+      fallbackButton: {
+        label: 'Cerrar',
+        onPress: handleClose,
+        show: () => operationComplete,
+      },
+      canGoNext: () => {
+        if (operationComplete) return false;
+        if (!currentChallenge) return false;
+        if (isValidating || isExecutingOperation) return false;
+        if (timeRemaining <= 0) return false;
+        if (remainingAttempts <= 0) return false;
+
+        const hasRequiredChallenges = currentChallenge.retosSolicitados !== null && currentChallenge.retosSolicitados.length > 0;
+        if (!hasRequiredChallenges) return true;
+
+        if (requiresOtp(currentChallenge.retosSolicitados) && otpCode.length !== 6) return false;
+        if (requiresEmail(currentChallenge.retosSolicitados) && emailCode.length !== 6) return false;
+
+        return true;
+      },
+      onLeave: () => {
+        setOtpCode('');
+        setEmailCode('');
+        reset2FAState();
+        setHas2FAStepBeenInitialized(false);
+      },
+    },
+  ], [phone, unmaskedPhone, alias, email, montoMaximo, destinationWallet, destinationError, isLoadingDestination, currentChallenge, isCreatingChallenge, isValidating, isExecutingOperation, validationError, operationError, remainingAttempts, timeRemaining, otpCode, emailCode, operationComplete, isProcessing, colorScheme, textColor, secondaryTextColor, borderColor]);
+
+  if (!isCreateModalOpen) return null;
+
+  return (
+    <Modal visible={isCreateModalOpen} transparent animationType="slide" onRequestClose={handleClose}>
+      <View style={styles.modalBackdrop}>
+        <TouchableWithoutFeedback onPress={handleClose}>
+          <View style={styles.backdropOverlay} />
+        </TouchableWithoutFeedback>
+        <View style={[styles.modalContent, { backgroundColor }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
+            <Text style={[styles.modalTitle, { color: colorScheme === 'dark' ? '#ffffff' : '#a61612' }]}>{FAVORITE_TEXTS.CREATE_WALLET_TITLE}</Text>
+            <TouchableOpacity onPress={handleClose}>
+              <X size={24} color={textColor} />
+            </TouchableOpacity>
+          </View>
+
+          <TransferWizard
+            steps={wizardSteps}
+            onComplete={handleWizardComplete}
+            onCancel={handleClose}
+          />
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  backdropOverlay: {
+    flex: 1,
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+    height: '80%',
+    flexDirection: 'column',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  messageCard: {
+    borderWidth: 1,
+    borderRadius: 12,
+    flex: 0,
+    minHeight: 0,
+  },
+  stepContent: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 40,
+    flexGrow: 1,
+  },
+  verificationContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+});

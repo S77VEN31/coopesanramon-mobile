@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, useColorScheme } from 'react-native';
-import { CheckCircle2, CreditCard, Wallet, Smartphone } from 'lucide-react-native';
+import { CheckCircle2, CreditCard, Wallet, Smartphone, ArrowUpRight, ArrowDownLeft } from 'lucide-react-native';
 import { Card, CardContent } from '../../ui/Card';
 import { getTextColor, getSecondaryTextColor, getBorderColor } from '../../../../App';
 import { formatCurrency } from '../../../lib/utils/format.utils';
@@ -12,6 +12,9 @@ import type { MonederoFavoritoItem } from '../../../hooks/use-sinpe-movil-transf
 interface ConfirmationStepProps {
   transferType: 'local' | 'sinpe' | 'sinpe-mobile';
   sourceAccount: DtoCuenta | null;
+  // SINPE flow type
+  sinpeFlowType?: 'enviar-fondos' | 'recibir-fondos';
+  sinpeTransferType?: 'pagos-inmediatos' | 'creditos-directos' | 'debitos-tiempo-real' | null;
   // Local transfer
   localDestinationType?: 'favorites' | 'own' | 'manual';
   selectedFavoriteAccount?: CuentaFavoritaInternaItem | null;
@@ -34,6 +37,8 @@ interface ConfirmationStepProps {
 export default function ConfirmationStep({
   transferType,
   sourceAccount,
+  sinpeFlowType,
+  sinpeTransferType,
   localDestinationType,
   selectedFavoriteAccount,
   selectedOwnAccount,
@@ -165,6 +170,39 @@ export default function ConfirmationStep({
             </View>
           </CardContent>
         </Card>
+
+        {/* SINPE Flow Info */}
+        {transferType === 'sinpe' && sinpeFlowType && sinpeTransferType && (
+          <Card style={styles.detailCard} colorScheme={colorScheme}>
+            <View style={styles.topBorder} />
+            <CardContent style={styles.cardContent}>
+              <View style={styles.cardHeader}>
+                <View style={styles.iconContainer}>
+                  {sinpeFlowType === 'enviar-fondos' ? (
+                    <ArrowUpRight size={20} color="#a61612" />
+                  ) : (
+                    <ArrowDownLeft size={20} color="#a61612" />
+                  )}
+                </View>
+                <View style={styles.cardInfo}>
+                  <Text style={[styles.detailLabel, { color: secondaryTextColor }]}>
+                    Tipo de operación
+                  </Text>
+                  <Text style={[styles.detailValue, { color: textColor }]}>
+                    {sinpeFlowType === 'enviar-fondos' ? 'Enviar fondos' : 'Traer fondos'}
+                  </Text>
+                  <View style={[styles.separator, { borderTopColor: borderColor }]} />
+                  <Text style={[styles.detailSubtext, { color: secondaryTextColor }]}>
+                    Modo:{' '}
+                    {sinpeTransferType === 'pagos-inmediatos' && 'Tiempo real'}
+                    {sinpeTransferType === 'creditos-directos' && 'Diferido'}
+                    {sinpeTransferType === 'debitos-tiempo-real' && 'Débito tiempo real'}
+                  </Text>
+                </View>
+              </View>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Source Account */}
         {sourceAccount && (

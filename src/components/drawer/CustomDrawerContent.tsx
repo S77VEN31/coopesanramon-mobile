@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, useColorScheme, Platform, Sta
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DrawerContentScrollView, DrawerContentComponentProps } from '@react-navigation/drawer';
-import { Home, CreditCard, ArrowLeftRight, MoreHorizontal, LogOut, History, User } from 'lucide-react-native';
+import { Home, CreditCard, ArrowLeftRight, Star, LogOut, History, User, TrendingUp } from 'lucide-react-native';
 import LogoBlancoLargo from '../../../assets/logo-blanco-largo.svg';
 import { useAuthStore } from '@/lib/states/auth.store';
 import { getBackgroundColor, getTextColor, getSecondaryTextColor, getBorderColor, getCardBackgroundColor } from '../../../App';
@@ -21,7 +21,8 @@ const drawerScreens: DrawerScreen[] = [
   { name: 'Accounts', label: 'Cuentas', icon: CreditCard },
   { name: 'Movements', label: 'Movimientos', icon: History },
   { name: 'Transfers', label: 'Transferencias', icon: ArrowLeftRight },
-  { name: 'More', label: 'Más', icon: MoreHorizontal },
+  { name: 'TimeDeposits', label: 'Inversiones', icon: TrendingUp },
+  { name: 'FavoriteAccounts', label: 'Favoritas', icon: Star },
 ];
 
 export default function CustomDrawerContent(props: DrawerContentComponentProps) {

@@ -210,11 +210,11 @@ export function sinpeMovilTransferRequires2FA(): boolean {
 export function getSinpeMovilOperationType(tipoDestino: TipoDestinoTransferencia): TipoOperacion {
   switch (tipoDestino) {
     case TipoDestinoTransferencia.CuentaFavorita:
-      return TipoOperacion.TransferenciaSinpeMovil;
+      return TipoOperacion.TransferenciaSinpeMovilMonederoFavorito;
     case TipoDestinoTransferencia.CuentaDigitada:
-      return TipoOperacion.TransferenciaSinpeMovil;
+      return TipoOperacion.TransferenciaSinpeMovilMonederoDigitado;
     default:
-      return TipoOperacion.TransferenciaSinpeMovil;
+      return TipoOperacion.TransferenciaSinpeMovilMonederoDigitado;
   }
 }
 

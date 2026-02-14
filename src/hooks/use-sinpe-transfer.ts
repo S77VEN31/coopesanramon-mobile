@@ -6,18 +6,9 @@ import { validateEmail } from '../lib/utils/email.utils';
 import { formatCurrency } from '../lib/utils/format.utils';
 import { useAuthStore } from '../lib/states/auth.store';
 
-// Simplified SINPE favorite account interface
-export interface CuentaSinpeFavoritaItem {
-  id: number;
-  numeroCuentaDestino: string;
-  codigoBancoDestino: string;
-  codigoMonedaDestino: string;
-  titularDestino: string;
-  identificacionDestino: string | null;
-  email: string | null;
-  alias: string | null;
-  montoMaximo: number | null;
-}
+// Re-export from API layer for backwards compatibility
+import type { CuentaSinpeFavoritaItem } from '@/services/api/favorites.api';
+export type { CuentaSinpeFavoritaItem } from '@/services/api/favorites.api';
 
 export function useSinpeTransfer(
   selectedSourceAccount: DtoCuenta | null, 

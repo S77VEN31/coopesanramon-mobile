@@ -18,6 +18,9 @@ interface InputProps {
   editable?: boolean;
   colorScheme?: 'light' | 'dark' | null | undefined;
   backgroundColor?: string;
+  returnKeyType?: 'done' | 'go' | 'next' | 'search' | 'send' | 'default';
+  onSubmitEditing?: () => void;
+  autoFocus?: boolean;
 }
 
 export const Input = forwardRef<TextInput, InputProps>(({
@@ -36,6 +39,9 @@ export const Input = forwardRef<TextInput, InputProps>(({
   editable = true,
   colorScheme = 'light',
   backgroundColor,
+  returnKeyType = 'default',
+  onSubmitEditing,
+  autoFocus = false,
 }, ref) => {
   const [isFocused, setIsFocused] = useState(false);
   const textColor = getTextColor(colorScheme);
@@ -66,14 +72,18 @@ export const Input = forwardRef<TextInput, InputProps>(({
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
           editable={editable}
+          returnKeyType={returnKeyType}
+          onSubmitEditing={onSubmitEditing}
+          autoFocus={autoFocus}
+          onPressIn={() => setIsFocused(true)}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           style={[
             styles.input,
-            leftIcon && styles.inputWithLeftIcon,
-            rightIcon && styles.inputWithRightIcon,
-            !editable && styles.inputDisabled,
-            { 
+            leftIcon ? styles.inputWithLeftIcon : undefined,
+            rightIcon ? styles.inputWithRightIcon : undefined,
+            !editable ? styles.inputDisabled : undefined,
+            {
               backgroundColor: inputBackgroundColor,
               borderColor: error ? '#991b1b' : (isFocused ? '#a61612' : borderColor),
               color: textColor,

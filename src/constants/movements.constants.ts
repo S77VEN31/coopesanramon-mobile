@@ -45,10 +45,9 @@ export const MOVEMENTS_METRICS = {
     description: (count: number) => 
       `${count} movimiento${count !== 1 ? "s" : ""}`,
   },
-  flujoNeto: {
-    title: "Flujo Neto",
-    description: (count: number) => 
-      `${count} movimiento${count !== 1 ? "s" : ""} total`,
+  saldoCuenta: {
+    title: "Saldo de la Cuenta",
+    description: () => "Saldo disponible actual",
   },
 } as const;
 

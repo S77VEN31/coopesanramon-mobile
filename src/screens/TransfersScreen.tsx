@@ -32,24 +32,9 @@ import { useSinpeMovilTransfer, type MonederoFavoritoItem } from '@/hooks/use-si
 import type { DtoCuenta } from '@/services/api/accounts.api';
 import { api } from '@/services/api';
 import type { EnviarTransferenciaInternaResponse, EnviarTransferenciaSinpeResponse, EnviarTransferenciaSinpeMovilResponse } from '@/services/api/transfers.api';
+import type { ListInternalFavoriteAccountsResponse, ListSinpeFavoriteAccountsResponse, ListFavoriteWalletsResponse } from '@/services/api/favorites.api';
 
 type Props = DrawerScreenProps<MainDrawerParamList, 'Transfers'>;
-
-// Interfaces for favorite accounts/wallets
-interface ListInternalFavoriteAccountsResponse {
-  cuentasFavoritas: CuentaFavoritaInternaItem[] | null;
-  total: number;
-}
-
-interface ListSinpeFavoriteAccountsResponse {
-  cuentasFavoritas: CuentaSinpeFavoritaItem[] | null;
-  total: number;
-}
-
-interface ListFavoriteWalletsResponse {
-  monederosFavoritos: MonederoFavoritoItem[] | null;
-  total: number;
-}
 
 export default function TransfersScreen({ navigation }: Props) {
   const colorScheme = useColorScheme();
@@ -215,6 +200,19 @@ export default function TransfersScreen({ navigation }: Props) {
     if (value === 'sinpe') {
       setSinpeTransferType('pagos-inmediatos');
     }
+  };
+
+  // Handle SINPE flow type change
+  const handleSinpeFlowTypeChange = (value: 'enviar-fondos' | 'recibir-fondos') => {
+    setSinpeFlowType(value);
+    if (value === 'recibir-fondos') {
+      setSinpeTransferType('debitos-tiempo-real');
+    } else {
+      setSinpeTransferType('pagos-inmediatos');
+    }
+    // Solo resetear destino, no cuenta origen ni monto/descripción
+    sinpeTransfer.setSelectedSinpeFavoriteAccount(null);
+    sinpeTransfer.setSinpeDestinationIban('');
   };
 
   // Handle source account selection by identifier
@@ -652,6 +650,8 @@ export default function TransfersScreen({ navigation }: Props) {
             localDestinationType={localTransfer.destinationType}
             onLocalDestinationTypeChange={localTransfer.setDestinationType}
             selectedFavoriteAccount={localTransfer.selectedFavoriteAccount}
+            localFavoriteAccounts={getFilteredFavorites()}
+            onLocalFavoriteSelect={handleFavoriteAccountSelect}
             selectedOwnAccount={localTransfer.selectedOwnAccount}
             ownAccounts={getFilteredAccounts()}
             onOwnAccountSelect={handleOwnAccountSelect}
@@ -661,9 +661,15 @@ export default function TransfersScreen({ navigation }: Props) {
             isValidatingAccount={localTransfer.isValidatingAccount}
             accountValidationError={localTransfer.accountValidationError}
             validatedAccountInfo={localTransfer.validatedAccountInfo}
+            sinpeFlowType={sinpeFlowType}
+            onSinpeFlowTypeChange={handleSinpeFlowTypeChange}
+            sinpeTransferType={sinpeTransferType}
+            onSinpeTransferTypeChange={setSinpeTransferType}
             sinpeDestinationType={sinpeTransfer.sinpeDestinationType}
             onSinpeDestinationTypeChange={sinpeTransfer.setSinpeDestinationType}
             selectedSinpeFavoriteAccount={sinpeTransfer.selectedSinpeFavoriteAccount}
+            sinpeFavoriteAccounts={getFilteredSinpeFavorites()}
+            onSinpeFavoriteSelect={handleSinpeFavoriteAccountSelect}
             sinpeDestinationIban={sinpeTransfer.sinpeDestinationIban}
             onSinpeDestinationIbanChange={sinpeTransfer.setSinpeDestinationIban}
             sinpeDestinationFormatError={sinpeTransfer.sinpeDestinationFormatError}
@@ -673,6 +679,8 @@ export default function TransfersScreen({ navigation }: Props) {
             sinpeMovilDestinationType={sinpeMovilTransfer.sinpeMovilDestinationType}
             onSinpeMovilDestinationTypeChange={sinpeMovilTransfer.setSinpeMovilDestinationType}
             selectedSinpeMovilFavoriteWallet={sinpeMovilTransfer.selectedSinpeMovilFavoriteWallet}
+            sinpeMovilFavoriteWallets={getFilteredFavoriteWallets()}
+            onSinpeMovilFavoriteSelect={handleSinpeMovilFavoriteWalletSelect}
             sinpeMovilPhoneNumber={sinpeMovilTransfer.sinpeMovilPhoneNumber}
             onSinpeMovilPhoneChange={sinpeMovilTransfer.setSinpeMovilPhoneNumber}
             isValidatingSinpeMovilMonedero={sinpeMovilTransfer.isValidatingSinpeMovilMonedero}
@@ -711,6 +719,8 @@ export default function TransfersScreen({ navigation }: Props) {
           <ConfirmationStep
             transferType={transferType}
             sourceAccount={selectedSourceAccount}
+            sinpeFlowType={sinpeFlowType}
+            sinpeTransferType={sinpeTransferType}
             localDestinationType={localTransfer.destinationType}
             selectedFavoriteAccount={localTransfer.selectedFavoriteAccount}
             selectedOwnAccount={localTransfer.selectedOwnAccount}
@@ -741,6 +751,8 @@ export default function TransfersScreen({ navigation }: Props) {
     isLoadingFavorites,
     isLoadingSinpeFavorites,
     isLoadingFavoriteWallets,
+    sinpeFlowType,
+    sinpeTransferType,
   ]);
 
   return (

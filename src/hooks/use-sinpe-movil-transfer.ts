@@ -3,16 +3,9 @@ import { validateSinpeMovilMonedero, type ObtenerMonederoSinpeResponse } from '.
 import { validateEmail } from '../lib/utils/email.utils';
 import { formatCurrency } from '../lib/utils/format.utils';
 
-// Simplified favorite wallet interface
-export interface MonederoFavoritoItem {
-  id: number;
-  monedero: string | null;
-  titular: string | null;
-  codigoBanco: string | null;
-  email: string | null;
-  alias: string | null;
-  montoMaximo: number | null;
-}
+// Re-export from API layer for backwards compatibility
+import type { MonederoFavoritoItem } from '@/services/api/favorites.api';
+export type { MonederoFavoritoItem } from '@/services/api/favorites.api';
 
 export function useSinpeMovilTransfer() {
   const [sinpeMovilDestinationType, setSinpeMovilDestinationType] = useState<'favorites' | 'manual'>('favorites');

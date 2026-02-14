@@ -8,6 +8,7 @@ interface OTPInputProps {
   onChange: (value: string) => void;
   disabled?: boolean;
   colorScheme?: 'light' | 'dark' | null | undefined;
+  autoFocus?: boolean;
 }
 
 export const OTPInput: React.FC<OTPInputProps> = ({
@@ -16,6 +17,7 @@ export const OTPInput: React.FC<OTPInputProps> = ({
   onChange,
   disabled = false,
   colorScheme = 'light',
+  autoFocus = false,
 }) => {
   const inputRefs = useRef<TextInput[]>([]);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
@@ -27,6 +29,17 @@ export const OTPInput: React.FC<OTPInputProps> = ({
   useEffect(() => {
     inputRefs.current = inputRefs.current.slice(0, length);
   }, [length]);
+
+  // Auto-focus first empty input when autoFocus prop changes
+  useEffect(() => {
+    if (autoFocus && !disabled) {
+      const firstEmptyIndex = value.split('').findIndex((v) => !v);
+      const indexToFocus = firstEmptyIndex === -1 ? 0 : firstEmptyIndex;
+      setTimeout(() => {
+        inputRefs.current[indexToFocus]?.focus();
+      }, 100);
+    }
+  }, [autoFocus, disabled]);
 
   const handleChange = (text: string, index: number) => {
     // Only allow digits
@@ -108,7 +121,6 @@ export const OTPInput: React.FC<OTPInputProps> = ({
           maxLength={1}
           selectTextOnFocus
           editable={!disabled}
-          autoFocus={index === 0 && !value}
         />
       ))}
     </View>

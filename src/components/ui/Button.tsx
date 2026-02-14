@@ -1,5 +1,6 @@
 import React from 'react';
-import { TouchableOpacity, Text, ActivityIndicator, View, StyleSheet } from 'react-native';
+import { TouchableOpacity, Text, ActivityIndicator, View, StyleSheet, useColorScheme } from 'react-native';
+import { getCardBgColor } from '../../../App';
 
 interface ButtonProps {
   children: React.ReactNode;
@@ -20,6 +21,8 @@ export const Button: React.FC<ButtonProps> = ({
   loading = false,
   style,
 }) => {
+  const colorScheme = useColorScheme();
+
   const getButtonStyle = () => {
     const baseStyle = [styles.button, styles.buttonBase];
     const sizeStyle = {
@@ -27,9 +30,11 @@ export const Button: React.FC<ButtonProps> = ({
       sm: styles.buttonSm,
       lg: styles.buttonLg,
     };
+    const outlineBg = getCardBgColor(colorScheme);
+    const outlineBorder = colorScheme === 'dark' ? '#404040' : '#e5e5e5';
     const variantStyle = {
       default: styles.buttonDefaultVariant,
-      outline: styles.buttonOutline,
+      outline: [styles.buttonOutline, { backgroundColor: outlineBg, borderColor: outlineBorder }],
       ghost: styles.buttonGhost,
       destructive: styles.buttonDestructive,
     };
@@ -122,14 +127,12 @@ const styles = StyleSheet.create({
   },
   buttonOutline: {
     borderWidth: 1,
-    borderColor: '#a61612',
-    backgroundColor: 'transparent',
   },
   buttonGhost: {
     backgroundColor: 'transparent',
   },
   buttonDestructive: {
-    backgroundColor: '#dc2626',
+    backgroundColor: '#a61612',
   },
   buttonDisabled: {
     opacity: 0.5,
@@ -155,7 +158,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   textOutline: {
-    color: '#a61612',
+    color: '#ffffff',
   },
   textGhost: {
     color: '#262626',

@@ -16,6 +16,11 @@ import LoansScreen from '@/screens/LoansScreen';
 import MyLoansScreen from '@/screens/MyLoansScreen';
 import PaymentPlanScreen from '@/screens/PaymentPlanScreen';
 import PaymentsScreen from '@/screens/PaymentsScreen';
+import TimeDepositsScreen from '@/screens/TimeDepositsScreen';
+import MyInvestmentsScreen from '@/screens/MyInvestmentsScreen';
+import CouponsScreen from '@/screens/CouponsScreen';
+import FavoriteAccountsScreen from '@/screens/FavoriteAccountsScreen';
+import MyFavoriteAccountsScreen from '@/screens/MyFavoriteAccountsScreen';
 import CustomDrawerContent from '@/components/drawer/CustomDrawerContent';
 import CustomHeader from '@/components/header/CustomHeader';
 
@@ -23,14 +28,6 @@ const RootStack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const MainStack = createNativeStackNavigator<MainStackParamList>();
 const Drawer = createDrawerNavigator<MainDrawerParamList>();
-
-function MoreScreen() {
-  return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      {/* More Screen (Placeholder) */}
-    </View>
-  );
-}
 
 function AuthNavigator() {
   return (
@@ -42,10 +39,12 @@ function AuthNavigator() {
 
 function DrawerNavigator() {
   const colorScheme = useColorScheme();
-  
+
   return (
     <Drawer.Navigator
+      id="MainDrawer"
       drawerContent={(props) => <CustomDrawerContent {...props} />}
+      backBehavior="none"
       screenOptions={{
         headerShown: true,
         drawerType: 'front',
@@ -96,11 +95,19 @@ function DrawerNavigator() {
         }}
       />
       <Drawer.Screen
-        name="More"
-        component={MoreScreen}
+        name="TimeDeposits"
+        component={TimeDepositsScreen}
         options={{
-          header: () => <CustomHeader title="Más" showDrawerButton={true} />,
-          drawerLabel: 'Más'
+          header: () => <CustomHeader title="Inversiones" showDrawerButton={true} />,
+          drawerLabel: 'Inversiones'
+        }}
+      />
+      <Drawer.Screen
+        name="FavoriteAccounts"
+        component={FavoriteAccountsScreen}
+        options={{
+          header: () => <CustomHeader title="Favoritas" showDrawerButton={true} />,
+          drawerLabel: 'Favoritas'
         }}
       />
     </Drawer.Navigator>
@@ -108,8 +115,17 @@ function DrawerNavigator() {
 }
 
 function MainNavigator() {
+  const colorScheme = useColorScheme();
+  const backgroundColor = colorScheme === 'dark' ? '#1a1a1a' : '#ffffff';
+
   return (
-    <MainStack.Navigator screenOptions={{ headerShown: false }}>
+    <MainStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor },
+        animation: 'default',
+      }}
+    >
       <MainStack.Screen name="MainDrawer" component={DrawerNavigator} />
       <MainStack.Screen
         name="AccountDetail"
@@ -141,6 +157,29 @@ function MainNavigator() {
         options={{
           headerShown: true,
           header: () => <CustomHeader title="Pagos Efectuados" showBackButton={true} />,
+        }}
+      />
+      <MainStack.Screen
+        name="MyInvestments"
+        component={MyInvestmentsScreen}
+        options={{
+          headerShown: true,
+          header: () => <CustomHeader title="Mis Inversiones" showBackButton={true} />,
+        }}
+      />
+      <MainStack.Screen
+        name="Coupons"
+        component={CouponsScreen}
+        options={{
+          headerShown: true,
+          header: () => <CustomHeader title="Cupones" showBackButton={true} />,
+        }}
+      />
+      <MainStack.Screen
+        name="MyFavoriteAccounts"
+        component={MyFavoriteAccountsScreen}
+        options={{
+          headerShown: true,
         }}
       />
     </MainStack.Navigator>

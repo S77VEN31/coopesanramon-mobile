@@ -81,11 +81,6 @@ export function calculateTotalEgresos(movements: DtoMovimientoCuenta[]): number 
     .reduce((sum, m) => sum + Math.abs(m.monto), 0);
 }
 
-export function calculateFlujoNeto(movements: DtoMovimientoCuenta[]): number {
-  const ingresos = calculateTotalIngresos(movements);
-  const egresos = calculateTotalEgresos(movements);
-  return ingresos - egresos;
-}
 
 export function countCreditos(movements: DtoMovimientoCuenta[]): number {
   return movements.filter((m) => {

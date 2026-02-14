@@ -1,10 +1,10 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { AlertCircle, Info, Loader2, Inbox, AlertTriangle } from 'lucide-react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { AlertCircle, Info, Loader2, Inbox, AlertTriangle, CheckCircle2 } from 'lucide-react-native';
 import { useColorScheme } from 'react-native';
 import { getTextColor, getSecondaryTextColor } from '../../../App';
 
-export type MessageType = "error" | "info" | "warning" | "loading";
+export type MessageType = "error" | "info" | "warning" | "loading" | "success";
 
 interface MessageCardProps {
   message: string;
@@ -37,6 +37,8 @@ export default function MessageCard({
         return Inbox;
       case "loading":
         return Loader2;
+      case "success":
+        return CheckCircle2;
       default:
         return Info;
     }
@@ -44,20 +46,6 @@ export default function MessageCard({
 
   const Icon = getIcon();
 
-  // Styles for icon container
-  const getIconContainerStyle = () => {
-    switch (type) {
-      case "error":
-      case "info":
-        return styles.iconContainerError;
-      case "warning":
-        return styles.iconContainerWarning;
-      case "loading":
-        return styles.iconContainerLoading;
-      default:
-        return styles.iconContainerError;
-    }
-  };
 
   // Colors for icon and text
   const iconColors = {
@@ -65,6 +53,15 @@ export default function MessageCard({
     info: '#a61612',
     warning: '#ca8a04',
     loading: '#a61612',
+    success: '#16a34a',
+  };
+
+  const iconFgColors = {
+    error: '#ffffff',
+    info: '#ffffff',
+    warning: '#262626',
+    loading: '#ffffff',
+    success: '#ffffff',
   };
 
   const textColors = {
@@ -72,17 +69,48 @@ export default function MessageCard({
     info: '#a61612',
     warning: '#a16207',
     loading: '#a61612',
+    success: '#16a34a',
   };
 
   const iconColor = iconColors[type] || iconColors.error;
+  const iconFgColor = iconFgColors[type] || iconFgColors.error;
   const messageColor = textColors[type] || textColors.error;
+
+
+  const spinAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (type === 'loading') {
+      const loop = Animated.loop(
+        Animated.timing(spinAnim, {
+          toValue: 1,
+          duration: 1000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      );
+      loop.start();
+      return () => loop.stop();
+    }
+  }, [type, spinAnim]);
+
+  const spin = spinAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   return (
     <View style={[styles.container, style]}>
-      <View style={[styles.iconContainer, getIconContainerStyle()]}>
-        <Icon size={32} color={iconColor} />
+      <View style={[styles.iconContainer, { backgroundColor: iconColor }]}>
+        {type === 'loading' ? (
+          <Animated.View style={{ transform: [{ rotate: spin }] }}>
+            <Icon size={24} color={iconFgColor} />
+          </Animated.View>
+        ) : (
+          <Icon size={24} color={iconFgColor} />
+        )}
       </View>
-      <Text style={[styles.message, { color: messageColor }]}>
+      <Text style={[styles.message, { color: textColor }]}>
         {message}
       </Text>
       {description && (
@@ -103,21 +131,12 @@ const styles = StyleSheet.create({
     minHeight: 200,
   },
   iconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    justifyContent: 'center',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 12,
-  },
-  iconContainerError: {
-    backgroundColor: 'rgba(166, 22, 18, 0.1)',
-  },
-  iconContainerWarning: {
-    backgroundColor: 'rgba(234, 179, 8, 0.1)',
-  },
-  iconContainerLoading: {
-    backgroundColor: 'rgba(166, 22, 18, 0.1)',
   },
   message: {
     fontSize: 14,

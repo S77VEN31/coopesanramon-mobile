@@ -39,7 +39,7 @@ export default function AccountDetailScreen({ route, navigation }: Props) {
   }, [navigation]);
 
   const handleViewMovements = () => {
-    navigation.navigate('Movements', { numeroCuenta });
+    navigation.navigate('MainDrawer', { screen: 'Movements', params: { numeroCuenta } });
   };
 
   const account = accountDetail?.cuenta || null;

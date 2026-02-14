@@ -158,9 +158,23 @@ export async function apiRequest<T>(
         await handleAuthError(response.status);
       }
 
-      const errorData = data as { message?: string; errors?: Record<string, string[]> } | null;
+      const errorData = data as {
+        message?: string;
+        detail?: string;
+        title?: string;
+        mensajes?: { 'es-CR'?: string; 'en-US'?: string; [key: string]: string | undefined };
+        errors?: Record<string, string[]>;
+      } | null;
+
+      const errorMessage =
+        errorData?.mensajes?.['es-CR'] ||
+        errorData?.detail ||
+        errorData?.message ||
+        errorData?.title ||
+        `Error ${response.status}`;
+
       throw new ApiException({
-        message: errorData?.message || `Error ${response.status}: ${response.statusText}`,
+        message: errorMessage,
         statusCode: response.status,
         errors: errorData?.errors,
       });

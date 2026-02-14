@@ -5,16 +5,9 @@ import { IBAN_LENGTH, validateIbanFormat, extractBankCodeFromIban } from '../lib
 import { validateEmail } from '../lib/utils/email.utils';
 import { formatCurrency } from '../lib/utils/format.utils';
 
-// Simplified favorite account interface (can be extended later when favorites are implemented)
-export interface CuentaFavoritaInternaItem {
-  id: number;
-  numeroCuenta: string | null;
-  codigoMoneda: string | null;
-  titular: string | null;
-  email: string | null;
-  alias: string | null;
-  montoMaximo: number | null;
-}
+// Re-export from API layer for backwards compatibility
+import type { CuentaFavoritaInternaItem } from '@/services/api/favorites.api';
+export type { CuentaFavoritaInternaItem } from '@/services/api/favorites.api';
 
 export function useLocalTransfer(
   selectedSourceAccount: DtoCuenta | null, 

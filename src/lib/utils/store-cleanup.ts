@@ -9,6 +9,8 @@ import { usePaymentsStore } from '@/lib/states/payments.store';
 import { usePaymentPlanStore } from '@/lib/states/paymentPlan.store';
 import { useInstallmentDetailStore } from '@/lib/states/installmentDetail.store';
 import { useLoanPaymentStore } from '@/lib/states/loanPayment.store';
+import { useInvestmentsStore } from '@/lib/states/investments.store';
+import { useCouponsStore } from '@/lib/states/coupons.store';
 
 /**
  * Clears all application stores to ensure no user data persists after logout
@@ -25,6 +27,8 @@ export function clearAllStores(): void {
     usePaymentPlanStore.getState().clearPaymentPlan();
     useInstallmentDetailStore.getState().resetState();
     useLoanPaymentStore.getState().resetPaymentResult();
+    useInvestmentsStore.getState().clearInvestments();
+    useCouponsStore.getState().clearCoupons();
   } catch (error) {
     // Log error but don't throw - we want to ensure logout completes even if some stores fail to clear
     console.error('Error clearing stores on logout:', error);

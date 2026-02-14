@@ -54,12 +54,9 @@ export default function MyLoansScreen({ navigation }: Props) {
                 />
                 <TouchableOpacity
                   onPress={() => {
-                    if (searchTerm.length > 0) {
-                      setSearchTerm('');
-                    } else {
-                      setShowSearch(false);
-                      Keyboard.dismiss();
-                    }
+                    setShowSearch(false);
+                    setSearchTerm('');
+                    Keyboard.dismiss();
                   }}
                   activeOpacity={0.7}
                   style={styles.clearButton}
@@ -94,6 +91,15 @@ export default function MyLoansScreen({ navigation }: Props) {
     });
     return unsubscribeBlur;
   }, [navigation]);
+
+  useEffect(() => {
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      if (showSearch) {
+        searchInputRef.current?.blur();
+      }
+    });
+    return () => keyboardDidHideListener.remove();
+  }, [showSearch]);
 
   useFocusEffect(
     React.useCallback(() => {

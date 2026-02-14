@@ -4,7 +4,7 @@ import { useColorScheme } from 'react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { Search, X, ArrowUp, ArrowDown, RefreshCw, Filter } from 'lucide-react-native';
+import { Search, X, ArrowUp, ArrowDown, Wallet, Filter } from 'lucide-react-native';
 import type { DrawerScreenProps } from '@react-navigation/drawer';
 import CustomHeader from '../components/header/CustomHeader';
 import { useMovementsStore } from '../lib/states/movements.store';
@@ -34,7 +34,6 @@ import {
   filterMovements,
   calculateTotalIngresos,
   calculateTotalEgresos,
-  calculateFlujoNeto,
   countCreditos,
   countDebitos,
   sortMovementsByDate,
@@ -150,11 +149,17 @@ export default function MovementsScreen({ navigation: routeNavigation, route }: 
       const accountExists = accounts.some(
         (acc) => getAccountIdentifier(acc) === route.params.numeroCuenta
       );
-      if (accountExists && !selectedAccount) {
+      if (accountExists && selectedAccount !== route.params.numeroCuenta) {
+        clearMovements();
         setSelectedAccount(route.params.numeroCuenta);
+        setDateFrom(undefined);
+        setDateTo(undefined);
+        setSelectedType(ALL_TYPES_VALUE);
+        setSearchTerm("");
+        setSortOrder("desc");
       }
     }
-  }, [route.params?.numeroCuenta, accounts.length, selectedAccount]);
+  }, [route.params?.numeroCuenta, accounts.length]);
 
   // Load accounts on mount and when screen is focused
   useFocusEffect(
@@ -196,20 +201,15 @@ export default function MovementsScreen({ navigation: routeNavigation, route }: 
     }
   }, [selectedAccount]);
 
-  // Auto-load movements for today when account is selected and no filters are applied
+  // Set default dates to today when account is selected and no dates are set
   useEffect(() => {
-    if (selectedAccount && !dateFrom && !dateTo && movements.length === 0 && !isLoading) {
+    if (selectedAccount && !dateFrom && !dateTo) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       setDateFrom(today);
       setDateTo(today);
-      
-      // Load movements for today
-      const fechaInicial = formatDateForApiStart(today);
-      const fechaFinal = formatDateForApiEnd(today);
-      loadMovements(selectedAccount, fechaInicial, fechaFinal, undefined);
     }
-  }, [selectedAccount, dateFrom, dateTo, movements.length, isLoading, loadMovements]);
+  }, [selectedAccount, dateFrom, dateTo]);
 
   // Filter and sort movements
   const filteredMovements = useMemo(() => {
@@ -229,12 +229,20 @@ export default function MovementsScreen({ navigation: routeNavigation, route }: 
   // Calculate metrics
   const totalIngresos = useMemo(() => calculateTotalIngresos(movements), [movements]);
   const totalEgresos = useMemo(() => calculateTotalEgresos(movements), [movements]);
-  const flujoNeto = useMemo(() => calculateFlujoNeto(movements), [movements]);
+  const saldoCuenta = selectedAccountData?.saldo ?? 0;
 
   // Prepare metrics cards data for carousel
   const metricsCards = useMemo(() => {
     if (movements.length === 0) return [];
     return [
+      {
+        title: MOVEMENTS_METRICS.saldoCuenta.title,
+        value: formatCurrency(saldoCuenta, accountCurrency),
+        description: MOVEMENTS_METRICS.saldoCuenta.description(),
+        icon: Wallet,
+        valueClassName: saldoCuenta >= 0 ? "text-green-600" : "text-destructive",
+        iconClassName: "text-muted-foreground",
+      },
       {
         title: MOVEMENTS_METRICS.totalIngresos.title,
         value: formatCurrency(totalIngresos, accountCurrency),
@@ -251,16 +259,8 @@ export default function MovementsScreen({ navigation: routeNavigation, route }: 
         valueClassName: "text-destructive",
         iconClassName: "text-destructive",
       },
-      {
-        title: MOVEMENTS_METRICS.flujoNeto.title,
-        value: formatCurrency(flujoNeto, accountCurrency),
-        description: MOVEMENTS_METRICS.flujoNeto.description(movements.length),
-        icon: RefreshCw,
-        valueClassName: flujoNeto >= 0 ? "text-green-600" : "text-destructive",
-        iconClassName: "text-muted-foreground",
-      },
     ];
-  }, [movements, totalIngresos, totalEgresos, flujoNeto, accountCurrency]);
+  }, [movements, saldoCuenta, totalIngresos, totalEgresos, accountCurrency]);
 
   const handleSearch = () => {
     if (!datesValid) {
@@ -356,9 +356,9 @@ export default function MovementsScreen({ navigation: routeNavigation, route }: 
 
   const backgroundColor = getBackgroundColor(colorScheme);
 
-  const renderMovementItem = (item: any) => {
+  const renderMovementItem = (item: any, index: number) => {
     return (
-      <View key={`${item.fechaHora}-${item.transaccion || item.codigoTransaccion || Math.random()}`} style={[styles.movementItem, { backgroundColor: getCardBackgroundColor(colorScheme) }]}>
+      <View key={`movement-${index}`} style={[styles.movementItem, { backgroundColor: getCardBackgroundColor(colorScheme) }]}>
         {/* Header: Date and Badge */}
         <View style={styles.movementHeader}>
           <View style={styles.movementDateContainer}>
@@ -478,7 +478,7 @@ export default function MovementsScreen({ navigation: routeNavigation, route }: 
             />
           ) : sortedMovements.length > 0 ? (
             <View style={styles.movementsList}>
-              {sortedMovements.map((item) => renderMovementItem(item))}
+              {sortedMovements.map((item, index) => renderMovementItem(item, index))}
             </View>
           ) : (
             renderEmpty()

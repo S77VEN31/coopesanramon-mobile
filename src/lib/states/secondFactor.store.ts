@@ -3,12 +3,13 @@ import { devtools } from 'zustand/middleware';
 import {
   createdesafio,
   validatedesafio,
-  TipoOperacion,
-  TipoDesafio,
-  EstadoDesafio,
   type CreateChallengeResponse,
   type ValidateChallengeResponse,
-} from '@/services/api';
+} from '@/services/api/secondFactor.api';
+import {
+  TipoOperacion,
+  TipoDesafio,
+} from '@/services/api/shared.api';
 
 interface SecondFactorState {
   currentChallenge: CreateChallengeResponse | null;
@@ -61,50 +62,51 @@ export const useSecondFactorStore = create<SecondFactorState>()(
       onValidationSuccess: null,
 
       createdesafio: async (tipoOperacion: TipoOperacion, metadatos?: string) => {
-        set({ 
-          isCreatingChallenge: true, 
+        set({
+          isCreatingChallenge: true,
           error: null,
-          validationError: null, 
+          validationError: null,
         }, false, 'secondFactor/createChallengeStart');
 
         try {
-          const response = await createdesafio({
+          const requestPayload = {
             tipoOperacion,
             metadatos: metadatos || null,
             codigoCanal: 'Mobile',
             direccionIpCliente: null,
-          });
-          
+          };
+          const response = await createdesafio(requestPayload);
+
           set(
-            { 
+            {
               currentChallenge: response,
               currentOperation: tipoOperacion,
               remainingAttempts: response.maxIntentos ?? 0,
               timeRemaining: response.tiempoExpiracionSegundos ?? 0,
-              isCreatingChallenge: false, 
+              isCreatingChallenge: false,
               error: null,
-              validationError: null, 
+              validationError: null,
             },
             false,
             'secondFactor/createChallengeSuccess'
           );
-          
+
           return response;
         } catch (err) {
-          const errorMessage = err instanceof Error 
-            ? err.message 
+          const errorMessage = err instanceof Error
+            ? err.message
             : 'Error al crear el desafío';
-          
+
           set(
-            { 
-              currentChallenge: null, 
-              isCreatingChallenge: false, 
-              error: errorMessage 
+            {
+              currentChallenge: null,
+              isCreatingChallenge: false,
+              error: errorMessage
             },
             false,
             'secondFactor/createChallengeError'
           );
-          
+
           return null;
         }
       },
@@ -177,9 +179,9 @@ export const useSecondFactorStore = create<SecondFactorState>()(
           } else {
             const newAttempts = Math.max(0, remainingAttempts - 1);
             set(
-              { 
+              {
                 remainingAttempts: newAttempts,
-                validationError: null, 
+                validationError: 'Código incorrecto. Verifica e intenta nuevamente.',
               },
               false,
               'secondFactor/validateFailed'
@@ -195,10 +197,10 @@ export const useSecondFactorStore = create<SecondFactorState>()(
           const newAttempts = Math.max(0, remainingAttempts - 1);
           
           set(
-            { 
+            {
               isValidating: false,
               remainingAttempts: newAttempts,
-              validationError: null, 
+              validationError: 'Error al validar. Intenta nuevamente.',
               validationErrorRaw: err,
             },
             false,
@@ -214,25 +216,25 @@ export const useSecondFactorStore = create<SecondFactorState>()(
       },
 
       openModal: async (tipoOperacion: TipoOperacion, onSuccess: (idDesafio: string | null) => Promise<void>, metadatos?: string) => {
-        set({ 
+        set({
           onValidationSuccess: onSuccess,
           operationError: null,
           operationSuccess: false,
         }, false, 'secondFactor/setCallback');
-        
+
         const challenge = await get().createdesafio(tipoOperacion, metadatos);
-        
+
         if (challenge) {
           const hasRequiredChallenges = challenge.retosSolicitados !== null && challenge.retosSolicitados.length > 0;
-          
+
           if (!hasRequiredChallenges) {
             set({ isModalOpen: true, isExecutingOperation: true, operationError: null }, false, 'secondFactor/executeOperationStart');
-            
+
             try {
-              await onSuccess(null); 
-              
+              await onSuccess(null);
+
               set(
-                { 
+                {
                   isExecutingOperation: false,
                   operationSuccess: true,
                   operationError: null,
@@ -241,12 +243,12 @@ export const useSecondFactorStore = create<SecondFactorState>()(
                 'secondFactor/executeOperationSuccess'
               );
             } catch (err) {
-              const errorMessage = err instanceof Error 
-                ? err.message 
+              const errorMessage = err instanceof Error
+                ? err.message
                 : 'Error al procesar la operación';
-              
+
               set(
-                { 
+                {
                   isExecutingOperation: false,
                   operationError: errorMessage,
                   operationSuccess: false,
@@ -257,9 +259,9 @@ export const useSecondFactorStore = create<SecondFactorState>()(
             }
             return;
           }
-          
+
           set({ isModalOpen: true }, false, 'secondFactor/openModal');
-          
+
           if (challenge.tiempoExpiracionSegundos != null && challenge.tiempoExpiracionSegundos > 0) {
             get().startCountdown();
           }

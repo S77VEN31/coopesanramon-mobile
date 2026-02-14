@@ -80,9 +80,10 @@ export const useMovementsStore = create<MovementsState>((set) => ({
   },
 
   clearMovements: () => {
-    set({ 
-      movements: [], 
+    set({
+      movements: [],
       response: null,
+      isLoading: false,
       error: null,
       numeroCuenta: undefined,
       fechaInicial: undefined,

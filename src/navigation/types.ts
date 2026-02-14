@@ -15,6 +15,9 @@ export type MainStackParamList = {
   MyLoans: undefined;
   PaymentPlan: undefined;
   Payments: undefined;
+  MyInvestments: undefined;
+  Coupons: { numeroInversion?: string } | undefined;
+  MyFavoriteAccounts: { type: 'local' | 'sinpe' | 'wallets' };
 };
 
 export type MainDrawerParamList = {
@@ -23,7 +26,8 @@ export type MainDrawerParamList = {
   Movements: { numeroCuenta?: string };
   Transfers: undefined;
   Loans: undefined;
-  More: undefined;
+  TimeDeposits: undefined;
+  FavoriteAccounts: undefined;
 };
 
 declare global {

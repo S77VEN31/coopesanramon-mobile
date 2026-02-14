@@ -33,8 +33,11 @@ export const LOANS_PAGE_TEXT = {
   title: 'Préstamos',
   description: 'Consulta y gestiona tus préstamos',
   categoryMyLoans: 'Mis Préstamos',
+  categoryMyLoansDescription: 'Consulta tus préstamos activos',
   categoryPaymentPlan: 'Plan de Pagos',
+  categoryPaymentPlanDescription: 'Revisa el calendario de tus cuotas',
   categoryPaymentsHistory: 'Pagos Efectuados',
+  categoryPaymentsHistoryDescription: 'Historial de pagos realizados',
 } as const;
 
 export const MY_LOANS_PAGE_TEXT = {

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme, View, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import Toast from 'react-native-toast-message';
 import { AppNavigator } from './src/navigation';
 import { useAuthStore } from './src/lib/states/auth.store';
@@ -39,9 +40,11 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-      <AppNavigator />
-      <Toast />
+      <KeyboardProvider>
+        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+        <AppNavigator />
+        <Toast />
+      </KeyboardProvider>
     </SafeAreaProvider>
   );
 }
@@ -69,6 +72,10 @@ export const getBorderColor = (colorScheme: 'light' | 'dark' | null | undefined)
 
 export const getInputBackgroundColor = (colorScheme: 'light' | 'dark' | null | undefined) => {
   return colorScheme === 'dark' ? '#333333' : '#f5f5f5';
+};
+
+export const getCardBgColor = (colorScheme: 'light' | 'dark' | null | undefined) => {
+  return colorScheme === 'dark' ? '#323232' : '#f9f9f9';
 };
 
 const styles = StyleSheet.create({

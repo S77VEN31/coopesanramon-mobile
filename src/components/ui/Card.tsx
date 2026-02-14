@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { getCardBackgroundColor, getTextColor, getSecondaryTextColor, getBorderColor } from '../../../App';
+import { getCardBgColor, getTextColor, getSecondaryTextColor, getBorderColor } from '../../../App';
 
 interface CardProps {
   children: React.ReactNode;
@@ -9,7 +9,7 @@ interface CardProps {
 }
 
 export const Card: React.FC<CardProps> = ({ children, style, colorScheme = 'light' }) => {
-  const backgroundColor = getCardBackgroundColor(colorScheme);
+  const backgroundColor = getCardBgColor(colorScheme);
   const borderColor = getBorderColor(colorScheme);
   
   return (

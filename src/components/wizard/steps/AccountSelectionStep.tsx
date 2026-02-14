@@ -1,11 +1,11 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, useColorScheme, Pressable } from 'react-native';
-import { ChevronDown, CreditCard, Phone, Star, Hash, User } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, useColorScheme, Pressable, Modal, FlatList } from 'react-native';
+import { ChevronDown, CreditCard, Phone, Star, Hash, User, ArrowUpRight, ArrowDownLeft, Clock, Clock3, X } from 'lucide-react-native';
 import { Card, CardContent } from '../../ui/Card';
 import { Input } from '../../ui/Input';
 import { AccountSelect } from '../../inputs/AccountSelect';
-import { getTextColor, getSecondaryTextColor, getBorderColor, getInputBackgroundColor } from '../../../../App';
-import { formatCurrency } from '../../../lib/utils/format.utils';
+import { getTextColor, getSecondaryTextColor, getBorderColor, getInputBackgroundColor, getCardBackgroundColor } from '../../../../App';
+import { formatCurrency, formatIBAN } from '../../../lib/utils/format.utils';
 import { getAccountIdentifier } from '../../../lib/utils/accounts.utils';
 import type { DtoCuenta } from '../../../services/api/accounts.api';
 import type { CuentaFavoritaInternaItem } from '../../../hooks/use-local-transfer';
@@ -24,6 +24,8 @@ interface AccountSelectionStepProps {
   localDestinationType?: 'favorites' | 'own' | 'manual';
   onLocalDestinationTypeChange?: (value: 'favorites' | 'own' | 'manual') => void;
   selectedFavoriteAccount?: CuentaFavoritaInternaItem | null;
+  localFavoriteAccounts?: CuentaFavoritaInternaItem[];
+  onLocalFavoriteSelect?: (account: CuentaFavoritaInternaItem) => void;
   selectedOwnAccount?: DtoCuenta | null;
   ownAccounts?: DtoCuenta[];
   onOwnAccountSelect?: (accountIdentifier: string) => void;
@@ -33,10 +35,17 @@ interface AccountSelectionStepProps {
   isValidatingAccount?: boolean;
   accountValidationError?: string | null;
   validatedAccountInfo?: GetCuentaDestinoInternaResponse | null;
+  // SINPE flow type props
+  sinpeFlowType?: 'enviar-fondos' | 'recibir-fondos';
+  onSinpeFlowTypeChange?: (value: 'enviar-fondos' | 'recibir-fondos') => void;
+  sinpeTransferType?: 'pagos-inmediatos' | 'creditos-directos' | 'debitos-tiempo-real' | null;
+  onSinpeTransferTypeChange?: (value: 'pagos-inmediatos' | 'creditos-directos') => void;
   // SINPE transfer props
   sinpeDestinationType?: 'favorites' | 'manual';
   onSinpeDestinationTypeChange?: (value: 'favorites' | 'manual') => void;
   selectedSinpeFavoriteAccount?: CuentaSinpeFavoritaItem | null;
+  sinpeFavoriteAccounts?: CuentaSinpeFavoritaItem[];
+  onSinpeFavoriteSelect?: (account: CuentaSinpeFavoritaItem) => void;
   sinpeDestinationIban?: string;
   onSinpeDestinationIbanChange?: (value: string) => void;
   sinpeDestinationFormatError?: string | null;
@@ -47,6 +56,8 @@ interface AccountSelectionStepProps {
   sinpeMovilDestinationType?: 'favorites' | 'manual';
   onSinpeMovilDestinationTypeChange?: (value: 'favorites' | 'manual') => void;
   selectedSinpeMovilFavoriteWallet?: MonederoFavoritoItem | null;
+  sinpeMovilFavoriteWallets?: MonederoFavoritoItem[];
+  onSinpeMovilFavoriteSelect?: (wallet: MonederoFavoritoItem) => void;
   sinpeMovilPhoneNumber?: string;
   onSinpeMovilPhoneChange?: (value: string) => void;
   isValidatingSinpeMovilMonedero?: boolean;
@@ -66,6 +77,8 @@ export default function AccountSelectionStep({
   localDestinationType,
   onLocalDestinationTypeChange,
   selectedFavoriteAccount,
+  localFavoriteAccounts = [],
+  onLocalFavoriteSelect,
   selectedOwnAccount,
   ownAccounts = [],
   onOwnAccountSelect,
@@ -75,9 +88,15 @@ export default function AccountSelectionStep({
   isValidatingAccount,
   accountValidationError,
   validatedAccountInfo,
+  sinpeFlowType,
+  onSinpeFlowTypeChange,
+  sinpeTransferType,
+  onSinpeTransferTypeChange,
   sinpeDestinationType,
   onSinpeDestinationTypeChange,
   selectedSinpeFavoriteAccount,
+  sinpeFavoriteAccounts = [],
+  onSinpeFavoriteSelect,
   sinpeDestinationIban,
   onSinpeDestinationIbanChange,
   sinpeDestinationFormatError,
@@ -87,6 +106,8 @@ export default function AccountSelectionStep({
   sinpeMovilDestinationType,
   onSinpeMovilDestinationTypeChange,
   selectedSinpeMovilFavoriteWallet,
+  sinpeMovilFavoriteWallets = [],
+  onSinpeMovilFavoriteSelect,
   sinpeMovilPhoneNumber,
   onSinpeMovilPhoneChange,
   isValidatingSinpeMovilMonedero,
@@ -99,11 +120,14 @@ export default function AccountSelectionStep({
   const textColor = getTextColor(colorScheme);
   const secondaryTextColor = getSecondaryTextColor(colorScheme);
   const borderColor = getBorderColor(colorScheme);
+  const inputBackgroundColor = getInputBackgroundColor(colorScheme);
+  const cardBackgroundColor = getCardBackgroundColor(colorScheme);
+  const [localFavModalVisible, setLocalFavModalVisible] = useState(false);
+  const [sinpeFavModalVisible, setSinpeFavModalVisible] = useState(false);
+  const [sinpeMovilFavModalVisible, setSinpeMovilFavModalVisible] = useState(false);
 
   const renderLocalDestination = () => {
     if (!localDestinationType || !onLocalDestinationTypeChange) return null;
-
-    const inputBackgroundColor = getInputBackgroundColor(colorScheme);
 
     return (
       <>
@@ -177,48 +201,136 @@ export default function AccountSelectionStep({
 
         {localDestinationType === 'favorites' && (
           <View style={styles.field}>
-            <Pressable
-              onPress={onDestinationSheetOpen}
-              disabled={isLoadingFavorites}
-              style={({ pressed }) => [
-                styles.pressable,
-                pressed && styles.pressablePressed,
+            <TouchableOpacity
+              onPress={() => setLocalFavModalVisible(true)}
+              disabled={isLoadingFavorites || localFavoriteAccounts.length === 0}
+              style={[
+                styles.dropdownTrigger,
+                {
+                  backgroundColor: inputBackgroundColor,
+                  borderColor: (isLoadingFavorites || localFavoriteAccounts.length === 0) ? borderColor + '80' : borderColor,
+                  opacity: (isLoadingFavorites || localFavoriteAccounts.length === 0) ? 0.5 : 1,
+                },
               ]}
             >
-              {({ pressed }) => (
-                <Card style={styles.card} colorScheme={colorScheme}>
-                  <View style={styles.topBorder} />
-                  <CardContent style={styles.cardContent}>
-                    <View style={styles.topSection}>
-                      <View style={styles.iconContainer}>
-                        <CreditCard size={20} color="#a61612" />
-                      </View>
-                      <View style={styles.accountInfo}>
-                        <Text style={[styles.label, { color: secondaryTextColor }]}>
-                          Cuenta Favorita
-                        </Text>
-                        <Text
-                          style={[
-                            styles.accountSelectorText,
-                            {
-                              color: selectedFavoriteAccount
-                                ? textColor
-                                : secondaryTextColor,
-                            },
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {selectedFavoriteAccount
-                            ? `${selectedFavoriteAccount.titular || 'Sin titular'} - ${selectedFavoriteAccount.numeroCuenta || ''}`
-                            : 'Seleccionar cuenta favorita'}
-                        </Text>
-                      </View>
-                      <ChevronDown size={20} color={secondaryTextColor} />
-                    </View>
-                  </CardContent>
-                </Card>
-              )}
-            </Pressable>
+              <View style={styles.dropdownTriggerContent}>
+                {selectedFavoriteAccount ? (
+                  <View style={styles.dropdownSelected}>
+                    <CreditCard size={16} color="#a61612" />
+                    <Text style={[styles.dropdownSelectedText, { color: textColor }]} numberOfLines={1}>
+                      {formatIBAN(selectedFavoriteAccount.numeroCuenta) || selectedFavoriteAccount.numeroCuenta || ''}
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={[styles.dropdownPlaceholder, { color: secondaryTextColor }]}>
+                    Seleccionar cuenta favorita
+                  </Text>
+                )}
+                <ChevronDown size={20} color={secondaryTextColor} />
+              </View>
+            </TouchableOpacity>
+
+            {selectedFavoriteAccount && (
+              <View style={styles.favInfoRow}>
+                <Text style={[styles.favInfoText, { color: secondaryTextColor }]}>
+                  Titular: {selectedFavoriteAccount.titular || 'N/A'}
+                </Text>
+              </View>
+            )}
+
+            <Modal
+              visible={localFavModalVisible}
+              transparent={true}
+              animationType="slide"
+              onRequestClose={() => setLocalFavModalVisible(false)}
+            >
+              <View style={styles.modalBackdrop}>
+                <View style={[styles.modalContent, { backgroundColor: cardBackgroundColor }]}>
+                  <View style={styles.modalHeader}>
+                    <Text style={[styles.modalTitle, { color: '#a61612' }]}>
+                      Seleccionar Cuenta Favorita
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => setLocalFavModalVisible(false)}
+                      style={styles.closeButton}
+                    >
+                      <X size={24} color={textColor} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.modalListContainer}>
+                    <FlatList
+                      data={localFavoriteAccounts}
+                      keyExtractor={(item) => item.id?.toString() || item.numeroCuenta || ''}
+                      style={styles.flatList}
+                      contentContainerStyle={styles.flatListContent}
+                      renderItem={({ item }) => {
+                        const isSelected = selectedFavoriteAccount?.numeroCuenta === item.numeroCuenta;
+                        return (
+                          <TouchableOpacity
+                            onPress={() => {
+                              onLocalFavoriteSelect?.(item);
+                              setLocalFavModalVisible(false);
+                            }}
+                            style={[
+                              styles.dropdownItem,
+                              isSelected && { backgroundColor: '#a61612' + '15' },
+                              { borderBottomColor: borderColor + '30' },
+                            ]}
+                          >
+                            <View style={styles.dropdownItemContent}>
+                              <View style={styles.dropdownItemHeader}>
+                                <CreditCard size={18} color={isSelected ? '#a61612' : secondaryTextColor} />
+                                <View style={styles.dropdownItemText}>
+                                  <Text
+                                    style={[
+                                      styles.dropdownItemAccount,
+                                      { color: isSelected ? '#a61612' : textColor },
+                                    ]}
+                                    numberOfLines={1}
+                                  >
+                                    {formatIBAN(item.numeroCuenta) || item.numeroCuenta || 'Sin número'}
+                                  </Text>
+                                  {item.titular && (
+                                    <Text
+                                      style={[
+                                        styles.dropdownItemSubtext,
+                                        { color: isSelected ? '#a61612' + 'CC' : secondaryTextColor },
+                                      ]}
+                                      numberOfLines={1}
+                                    >
+                                      {item.titular}
+                                    </Text>
+                                  )}
+                                  {item.alias && (
+                                    <Text
+                                      style={[
+                                        styles.dropdownItemSubtext,
+                                        { color: isSelected ? '#a61612' + 'CC' : secondaryTextColor },
+                                      ]}
+                                      numberOfLines={1}
+                                    >
+                                      {item.alias}
+                                    </Text>
+                                  )}
+                                </View>
+                              </View>
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      }}
+                      ListEmptyComponent={
+                        <View style={styles.emptyContainer}>
+                          <Text style={[styles.emptyText, { color: secondaryTextColor }]}>
+                            No hay cuentas favoritas disponibles
+                          </Text>
+                        </View>
+                      }
+                    />
+                  </View>
+                </View>
+              </View>
+            </Modal>
           </View>
         )}
 
@@ -263,14 +375,141 @@ export default function AccountSelectionStep({
     );
   };
 
+  const getInfoBoxMessage = () => {
+    if (sinpeTransferType === 'pagos-inmediatos') {
+      return 'Los 365 días del año con aplicación inmediata entre las 7:00am y las 10:00pm.';
+    }
+    if (sinpeTransferType === 'creditos-directos') {
+      return 'Lunes a viernes: solicitudes antes de las 2:00pm se acreditan el mismo día. Después de las 2:00pm, sábados, domingos y feriados se acreditan el siguiente día hábil.';
+    }
+    if (sinpeTransferType === 'debitos-tiempo-real') {
+      return 'Los 365 días del año con aplicación inmediata entre las 7:00am y las 10:00pm.';
+    }
+    return null;
+  };
+
   const renderSinpeDestination = () => {
     if (!sinpeDestinationType || !onSinpeDestinationTypeChange) return null;
 
+    const destinationLabel = sinpeFlowType === 'recibir-fondos'
+      ? 'Cuenta origen del débito'
+      : 'Cuenta Destino';
+
     return (
       <>
+        {/* SINPE Flow Type Tabs */}
+        {onSinpeFlowTypeChange && (
+          <View style={styles.field}>
+            <Text style={[styles.inputLabel, { color: textColor }]}>
+              Tipo de operación
+            </Text>
+            <View style={styles.tabsContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.tab,
+                  sinpeFlowType === 'enviar-fondos' && { borderBottomColor: '#a61612', borderBottomWidth: 2 },
+                ]}
+                onPress={() => onSinpeFlowTypeChange('enviar-fondos')}
+              >
+                <ArrowUpRight
+                  size={16}
+                  color={sinpeFlowType === 'enviar-fondos' ? '#a61612' : secondaryTextColor}
+                />
+                <Text
+                  style={[
+                    styles.tabText,
+                    { color: sinpeFlowType === 'enviar-fondos' ? '#a61612' : secondaryTextColor },
+                  ]}
+                >
+                  Enviar fondos
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.tab,
+                  sinpeFlowType === 'recibir-fondos' && { borderBottomColor: '#a61612', borderBottomWidth: 2 },
+                ]}
+                onPress={() => onSinpeFlowTypeChange('recibir-fondos')}
+              >
+                <ArrowDownLeft
+                  size={16}
+                  color={sinpeFlowType === 'recibir-fondos' ? '#a61612' : secondaryTextColor}
+                />
+                <Text
+                  style={[
+                    styles.tabText,
+                    { color: sinpeFlowType === 'recibir-fondos' ? '#a61612' : secondaryTextColor },
+                  ]}
+                >
+                  Traer fondos
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Execution Type Tabs (only for enviar-fondos) */}
+        {sinpeFlowType === 'enviar-fondos' && onSinpeTransferTypeChange && (
+          <View style={styles.field}>
+            <Text style={[styles.inputLabel, { color: textColor }]}>
+              Tipo de ejecución
+            </Text>
+            <View style={styles.tabsContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.tab,
+                  sinpeTransferType === 'pagos-inmediatos' && { borderBottomColor: '#a61612', borderBottomWidth: 2 },
+                ]}
+                onPress={() => onSinpeTransferTypeChange('pagos-inmediatos')}
+              >
+                <Clock
+                  size={16}
+                  color={sinpeTransferType === 'pagos-inmediatos' ? '#a61612' : secondaryTextColor}
+                />
+                <Text
+                  style={[
+                    styles.tabText,
+                    { color: sinpeTransferType === 'pagos-inmediatos' ? '#a61612' : secondaryTextColor },
+                  ]}
+                >
+                  Tiempo real
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.tab,
+                  sinpeTransferType === 'creditos-directos' && { borderBottomColor: '#a61612', borderBottomWidth: 2 },
+                ]}
+                onPress={() => onSinpeTransferTypeChange('creditos-directos')}
+              >
+                <Clock3
+                  size={16}
+                  color={sinpeTransferType === 'creditos-directos' ? '#a61612' : secondaryTextColor}
+                />
+                <Text
+                  style={[
+                    styles.tabText,
+                    { color: sinpeTransferType === 'creditos-directos' ? '#a61612' : secondaryTextColor },
+                  ]}
+                >
+                  Diferido
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Info Box */}
+        {sinpeTransferType && getInfoBoxMessage() && (
+          <View style={styles.infoBox}>
+            <Clock size={16} color="#a61612" style={styles.infoBoxIcon} />
+            <Text style={styles.infoBoxText}>{getInfoBoxMessage()}</Text>
+          </View>
+        )}
+
         <View style={styles.field}>
           <Text style={[styles.inputLabel, { color: textColor }]}>
-            Cuenta Destino
+            {destinationLabel}
           </Text>
           <View style={styles.tabsContainer}>
             <TouchableOpacity
@@ -318,48 +557,136 @@ export default function AccountSelectionStep({
 
         {sinpeDestinationType === 'favorites' && (
           <View style={styles.field}>
-            <Pressable
-              onPress={onDestinationSheetOpen}
-              disabled={isLoadingFavorites}
-              style={({ pressed }) => [
-                styles.pressable,
-                pressed && styles.pressablePressed,
+            <TouchableOpacity
+              onPress={() => setSinpeFavModalVisible(true)}
+              disabled={isLoadingFavorites || sinpeFavoriteAccounts.length === 0}
+              style={[
+                styles.dropdownTrigger,
+                {
+                  backgroundColor: inputBackgroundColor,
+                  borderColor: (isLoadingFavorites || sinpeFavoriteAccounts.length === 0) ? borderColor + '80' : borderColor,
+                  opacity: (isLoadingFavorites || sinpeFavoriteAccounts.length === 0) ? 0.5 : 1,
+                },
               ]}
             >
-              {({ pressed }) => (
-                <Card style={styles.card} colorScheme={colorScheme}>
-                  <View style={styles.topBorder} />
-                  <CardContent style={styles.cardContent}>
-                    <View style={styles.topSection}>
-                      <View style={styles.iconContainer}>
-                        <CreditCard size={20} color="#a61612" />
-                      </View>
-                      <View style={styles.accountInfo}>
-                        <Text style={[styles.label, { color: secondaryTextColor }]}>
-                          Cuenta Favorita SINPE
-                        </Text>
-                        <Text
-                          style={[
-                            styles.accountSelectorText,
-                            {
-                              color: selectedSinpeFavoriteAccount
-                                ? textColor
-                                : secondaryTextColor,
-                            },
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {selectedSinpeFavoriteAccount
-                            ? selectedSinpeFavoriteAccount.numeroCuentaDestino || ''
-                            : 'Seleccionar cuenta favorita'}
-                        </Text>
-                      </View>
-                      <ChevronDown size={20} color={secondaryTextColor} />
-                    </View>
-                  </CardContent>
-                </Card>
-              )}
-            </Pressable>
+              <View style={styles.dropdownTriggerContent}>
+                {selectedSinpeFavoriteAccount ? (
+                  <View style={styles.dropdownSelected}>
+                    <CreditCard size={16} color="#a61612" />
+                    <Text style={[styles.dropdownSelectedText, { color: textColor }]} numberOfLines={1}>
+                      {formatIBAN(selectedSinpeFavoriteAccount.numeroCuentaDestino) || selectedSinpeFavoriteAccount.numeroCuentaDestino || ''}
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={[styles.dropdownPlaceholder, { color: secondaryTextColor }]}>
+                    Seleccionar cuenta favorita
+                  </Text>
+                )}
+                <ChevronDown size={20} color={secondaryTextColor} />
+              </View>
+            </TouchableOpacity>
+
+            {selectedSinpeFavoriteAccount && (
+              <View style={styles.favInfoRow}>
+                <Text style={[styles.favInfoText, { color: secondaryTextColor }]}>
+                  Titular: {selectedSinpeFavoriteAccount.titularDestino || 'N/A'}
+                </Text>
+              </View>
+            )}
+
+            <Modal
+              visible={sinpeFavModalVisible}
+              transparent={true}
+              animationType="slide"
+              onRequestClose={() => setSinpeFavModalVisible(false)}
+            >
+              <View style={styles.modalBackdrop}>
+                <View style={[styles.modalContent, { backgroundColor: cardBackgroundColor }]}>
+                  <View style={styles.modalHeader}>
+                    <Text style={[styles.modalTitle, { color: '#a61612' }]}>
+                      Seleccionar Cuenta Favorita
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => setSinpeFavModalVisible(false)}
+                      style={styles.closeButton}
+                    >
+                      <X size={24} color={textColor} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.modalListContainer}>
+                    <FlatList
+                      data={sinpeFavoriteAccounts}
+                      keyExtractor={(item) => item.id?.toString() || item.numeroCuentaDestino || ''}
+                      style={styles.flatList}
+                      contentContainerStyle={styles.flatListContent}
+                      renderItem={({ item }) => {
+                        const isSelected = selectedSinpeFavoriteAccount?.numeroCuentaDestino === item.numeroCuentaDestino;
+                        return (
+                          <TouchableOpacity
+                            onPress={() => {
+                              onSinpeFavoriteSelect?.(item);
+                              setSinpeFavModalVisible(false);
+                            }}
+                            style={[
+                              styles.dropdownItem,
+                              isSelected && { backgroundColor: '#a61612' + '15' },
+                              { borderBottomColor: borderColor + '30' },
+                            ]}
+                          >
+                            <View style={styles.dropdownItemContent}>
+                              <View style={styles.dropdownItemHeader}>
+                                <CreditCard size={18} color={isSelected ? '#a61612' : secondaryTextColor} />
+                                <View style={styles.dropdownItemText}>
+                                  <Text
+                                    style={[
+                                      styles.dropdownItemAccount,
+                                      { color: isSelected ? '#a61612' : textColor },
+                                    ]}
+                                    numberOfLines={1}
+                                  >
+                                    {formatIBAN(item.numeroCuentaDestino) || item.numeroCuentaDestino || 'Sin número'}
+                                  </Text>
+                                  {item.titularDestino && (
+                                    <Text
+                                      style={[
+                                        styles.dropdownItemSubtext,
+                                        { color: isSelected ? '#a61612' + 'CC' : secondaryTextColor },
+                                      ]}
+                                      numberOfLines={1}
+                                    >
+                                      {item.titularDestino}
+                                    </Text>
+                                  )}
+                                  {item.alias && (
+                                    <Text
+                                      style={[
+                                        styles.dropdownItemSubtext,
+                                        { color: isSelected ? '#a61612' + 'CC' : secondaryTextColor },
+                                      ]}
+                                      numberOfLines={1}
+                                    >
+                                      {item.alias}
+                                    </Text>
+                                  )}
+                                </View>
+                              </View>
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      }}
+                      ListEmptyComponent={
+                        <View style={styles.emptyContainer}>
+                          <Text style={[styles.emptyText, { color: secondaryTextColor }]}>
+                            No hay cuentas favoritas disponibles
+                          </Text>
+                        </View>
+                      }
+                    />
+                  </View>
+                </View>
+              </View>
+            </Modal>
           </View>
         )}
 
@@ -452,47 +779,136 @@ export default function AccountSelectionStep({
 
         {sinpeMovilDestinationType === 'favorites' && (
           <View style={styles.field}>
-            <Pressable
-              onPress={onDestinationSheetOpen}
-              style={({ pressed }) => [
-                styles.pressable,
-                pressed && styles.pressablePressed,
+            <TouchableOpacity
+              onPress={() => setSinpeMovilFavModalVisible(true)}
+              disabled={isLoadingFavorites || sinpeMovilFavoriteWallets.length === 0}
+              style={[
+                styles.dropdownTrigger,
+                {
+                  backgroundColor: inputBackgroundColor,
+                  borderColor: (isLoadingFavorites || sinpeMovilFavoriteWallets.length === 0) ? borderColor + '80' : borderColor,
+                  opacity: (isLoadingFavorites || sinpeMovilFavoriteWallets.length === 0) ? 0.5 : 1,
+                },
               ]}
             >
-              {({ pressed }) => (
-                <Card style={styles.card} colorScheme={colorScheme}>
-                  <View style={styles.topBorder} />
-                  <CardContent style={styles.cardContent}>
-                    <View style={styles.topSection}>
-                      <View style={styles.iconContainer}>
-                        <Phone size={20} color="#a61612" />
-                      </View>
-                      <View style={styles.accountInfo}>
-                        <Text style={[styles.label, { color: secondaryTextColor }]}>
-                          Monedero Favorito
-                        </Text>
-                        <Text
-                          style={[
-                            styles.accountSelectorText,
-                            {
-                              color: selectedSinpeMovilFavoriteWallet
-                                ? textColor
-                                : secondaryTextColor,
-                            },
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {selectedSinpeMovilFavoriteWallet
-                            ? `${selectedSinpeMovilFavoriteWallet.titular || 'Sin titular'} - ${selectedSinpeMovilFavoriteWallet.monedero || ''}`
-                            : 'Seleccionar monedero favorito'}
-                        </Text>
-                      </View>
-                      <ChevronDown size={20} color={secondaryTextColor} />
-                    </View>
-                  </CardContent>
-                </Card>
-              )}
-            </Pressable>
+              <View style={styles.dropdownTriggerContent}>
+                {selectedSinpeMovilFavoriteWallet ? (
+                  <View style={styles.dropdownSelected}>
+                    <Phone size={16} color="#a61612" />
+                    <Text style={[styles.dropdownSelectedText, { color: textColor }]} numberOfLines={1}>
+                      {selectedSinpeMovilFavoriteWallet.monedero || ''}
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={[styles.dropdownPlaceholder, { color: secondaryTextColor }]}>
+                    Seleccionar monedero favorito
+                  </Text>
+                )}
+                <ChevronDown size={20} color={secondaryTextColor} />
+              </View>
+            </TouchableOpacity>
+
+            {selectedSinpeMovilFavoriteWallet && (
+              <View style={styles.favInfoRow}>
+                <Text style={[styles.favInfoText, { color: secondaryTextColor }]}>
+                  Titular: {selectedSinpeMovilFavoriteWallet.titular || 'N/A'}
+                </Text>
+              </View>
+            )}
+
+            <Modal
+              visible={sinpeMovilFavModalVisible}
+              transparent={true}
+              animationType="slide"
+              onRequestClose={() => setSinpeMovilFavModalVisible(false)}
+            >
+              <View style={styles.modalBackdrop}>
+                <View style={[styles.modalContent, { backgroundColor: cardBackgroundColor }]}>
+                  <View style={styles.modalHeader}>
+                    <Text style={[styles.modalTitle, { color: '#a61612' }]}>
+                      Seleccionar Monedero Favorito
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => setSinpeMovilFavModalVisible(false)}
+                      style={styles.closeButton}
+                    >
+                      <X size={24} color={textColor} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.modalListContainer}>
+                    <FlatList
+                      data={sinpeMovilFavoriteWallets}
+                      keyExtractor={(item) => item.id?.toString() || item.monedero || ''}
+                      style={styles.flatList}
+                      contentContainerStyle={styles.flatListContent}
+                      renderItem={({ item }) => {
+                        const isSelected = selectedSinpeMovilFavoriteWallet?.monedero === item.monedero;
+                        return (
+                          <TouchableOpacity
+                            onPress={() => {
+                              onSinpeMovilFavoriteSelect?.(item);
+                              setSinpeMovilFavModalVisible(false);
+                            }}
+                            style={[
+                              styles.dropdownItem,
+                              isSelected && { backgroundColor: '#a61612' + '15' },
+                              { borderBottomColor: borderColor + '30' },
+                            ]}
+                          >
+                            <View style={styles.dropdownItemContent}>
+                              <View style={styles.dropdownItemHeader}>
+                                <Phone size={18} color={isSelected ? '#a61612' : secondaryTextColor} />
+                                <View style={styles.dropdownItemText}>
+                                  <Text
+                                    style={[
+                                      styles.dropdownItemAccount,
+                                      { color: isSelected ? '#a61612' : textColor },
+                                    ]}
+                                    numberOfLines={1}
+                                  >
+                                    {item.monedero || 'Sin número'}
+                                  </Text>
+                                  {item.titular && (
+                                    <Text
+                                      style={[
+                                        styles.dropdownItemSubtext,
+                                        { color: isSelected ? '#a61612' + 'CC' : secondaryTextColor },
+                                      ]}
+                                      numberOfLines={1}
+                                    >
+                                      {item.titular}
+                                    </Text>
+                                  )}
+                                  {item.alias && (
+                                    <Text
+                                      style={[
+                                        styles.dropdownItemSubtext,
+                                        { color: isSelected ? '#a61612' + 'CC' : secondaryTextColor },
+                                      ]}
+                                      numberOfLines={1}
+                                    >
+                                      {item.alias}
+                                    </Text>
+                                  )}
+                                </View>
+                              </View>
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      }}
+                      ListEmptyComponent={
+                        <View style={styles.emptyContainer}>
+                          <Text style={[styles.emptyText, { color: secondaryTextColor }]}>
+                            No hay monederos favoritos disponibles
+                          </Text>
+                        </View>
+                      }
+                    />
+                  </View>
+                </View>
+              </View>
+            </Modal>
           </View>
         )}
 
@@ -716,6 +1132,132 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 14,
     fontWeight: '500',
+  },
+  dropdownTrigger: {
+    height: 44,
+    borderRadius: 6,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+  },
+  dropdownTriggerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dropdownSelected: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  dropdownSelectedText: {
+    fontSize: 16,
+    fontWeight: '500',
+    flex: 1,
+  },
+  dropdownPlaceholder: {
+    fontSize: 16,
+    flex: 1,
+  },
+  favInfoRow: {
+    marginTop: 6,
+    paddingHorizontal: 4,
+  },
+  favInfoText: {
+    fontSize: 13,
+    opacity: 0.8,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '50%',
+    height: '50%',
+    width: '100%',
+    flexDirection: 'column',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  modalListContainer: {
+    flex: 1,
+    flexShrink: 1,
+  },
+  flatList: {
+    flex: 1,
+  },
+  flatListContent: {
+    flexGrow: 1,
+  },
+  dropdownItem: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  dropdownItemContent: {
+    gap: 8,
+  },
+  dropdownItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  dropdownItemText: {
+    flex: 1,
+    gap: 4,
+  },
+  dropdownItemAccount: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  dropdownItemSubtext: {
+    fontSize: 14,
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+  },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(166, 22, 18, 0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(166, 22, 18, 0.2)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    gap: 8,
+  },
+  infoBoxIcon: {
+    marginTop: 2,
+    flexShrink: 0,
+  },
+  infoBoxText: {
+    fontSize: 13,
+    color: '#555',
+    lineHeight: 18,
+    flex: 1,
   },
 });
 
