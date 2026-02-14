@@ -43,9 +43,6 @@
         "projectId": "9b1e3a4f-7771-436d-9c93-6acfc1faafe8"
       }
     },
-    "owner": "s77ven",
-    "plugins": [
-      "@react-native-community/datetimepicker"
-    ]
+    "owner": "s77ven"
   }
 }

@@ -75,6 +75,7 @@ export {
   TipoProducto,
   TipoPrestamo,
   EstadoCuota,
+  TipoPagoPrestamo,
   TipoInversion,
   TipoTasaInteres,
   EstadoCupon,

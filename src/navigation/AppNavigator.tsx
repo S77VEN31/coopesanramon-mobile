@@ -12,6 +12,10 @@ import AccountsScreen from '@/screens/AccountsScreen';
 import AccountDetailScreen from '@/screens/AccountDetailScreen';
 import MovementsScreen from '@/screens/MovementsScreen';
 import TransfersScreen from '@/screens/TransfersScreen';
+import LoansScreen from '@/screens/LoansScreen';
+import MyLoansScreen from '@/screens/MyLoansScreen';
+import PaymentPlanScreen from '@/screens/PaymentPlanScreen';
+import PaymentsScreen from '@/screens/PaymentsScreen';
 import CustomDrawerContent from '@/components/drawer/CustomDrawerContent';
 import CustomHeader from '@/components/header/CustomHeader';
 
@@ -83,12 +87,20 @@ function DrawerNavigator() {
           drawerLabel: 'Transferencias' 
         }}
       />
-      <Drawer.Screen 
-        name="More" 
+      <Drawer.Screen
+        name="Loans"
+        component={LoansScreen}
+        options={{
+          header: () => <CustomHeader title="Préstamos" showDrawerButton={true} />,
+          drawerLabel: 'Préstamos'
+        }}
+      />
+      <Drawer.Screen
+        name="More"
         component={MoreScreen}
-        options={{ 
+        options={{
           header: () => <CustomHeader title="Más" showDrawerButton={true} />,
-          drawerLabel: 'Más' 
+          drawerLabel: 'Más'
         }}
       />
     </Drawer.Navigator>
@@ -99,12 +111,36 @@ function MainNavigator() {
   return (
     <MainStack.Navigator screenOptions={{ headerShown: false }}>
       <MainStack.Screen name="MainDrawer" component={DrawerNavigator} />
-      <MainStack.Screen 
-        name="AccountDetail" 
+      <MainStack.Screen
+        name="AccountDetail"
         component={AccountDetailScreen}
         options={{
           headerShown: true,
           header: () => <CustomHeader title="Detalles de Cuenta" showBackButton={true} />,
+        }}
+      />
+      <MainStack.Screen
+        name="MyLoans"
+        component={MyLoansScreen}
+        options={{
+          headerShown: true,
+          header: () => <CustomHeader title="Mis Préstamos" showBackButton={true} />,
+        }}
+      />
+      <MainStack.Screen
+        name="PaymentPlan"
+        component={PaymentPlanScreen}
+        options={{
+          headerShown: true,
+          header: () => <CustomHeader title="Plan de Pagos" showBackButton={true} />,
+        }}
+      />
+      <MainStack.Screen
+        name="Payments"
+        component={PaymentsScreen}
+        options={{
+          headerShown: true,
+          header: () => <CustomHeader title="Pagos Efectuados" showBackButton={true} />,
         }}
       />
     </MainStack.Navigator>

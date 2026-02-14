@@ -77,6 +77,12 @@ export enum EstadoCuota {
   Cancelada = 5,
 }
 
+export enum TipoPagoPrestamo {
+  NoDefinido = 0,
+  CuentaLocal = 1,
+  CuentaSinpe = 2,
+}
+
 export enum TipoInversion {
   CertificadoPlazoColones = 10,
   CertificadoDesmaterializadoColones = 12,

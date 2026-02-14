@@ -12,6 +12,9 @@ export type AuthStackParamList = {
 export type MainStackParamList = {
   MainDrawer: NavigatorScreenParams<MainDrawerParamList>;
   AccountDetail: { numeroCuenta: string };
+  MyLoans: undefined;
+  PaymentPlan: undefined;
+  Payments: undefined;
 };
 
 export type MainDrawerParamList = {
@@ -19,6 +22,7 @@ export type MainDrawerParamList = {
   Accounts: undefined;
   Movements: { numeroCuenta?: string };
   Transfers: undefined;
+  Loans: undefined;
   More: undefined;
 };
 

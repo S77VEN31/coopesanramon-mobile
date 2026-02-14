@@ -1,0 +1,48 @@
+export const PAYMENTS_PAGE_TEXT = {
+  title: 'Pagos Efectuados',
+  selectLoan: 'Selecciona un préstamo',
+  emptyMessage: 'No hay pagos efectuados.',
+  emptyMessageSearch: 'No se encontraron pagos que coincidan con tu búsqueda.',
+  searchPlaceholder: 'Buscar pago...',
+  totalPaid: 'Total Pagado',
+  pendingBalance: 'Saldo Pendiente',
+  nextInstallment: 'Próxima Cuota',
+} as const;
+
+export const INSTALLMENT_DETAIL_LABELS = {
+  title: 'Detalle de Cuota',
+  numeroOperacion: 'Número de Operación',
+  numeroCuota: 'Número de Cuota',
+  fechaPago: 'Fecha de Pago',
+  estado: 'Estado',
+  moneda: 'Moneda',
+  montoTotal: 'Monto Total',
+  rubros: 'Desglose',
+  descripcionRubro: 'Descripción',
+  monto: 'Monto',
+  montoPagado: 'Pagado',
+} as const;
+
+export const LOAN_PAYMENT_TEXT = {
+  title: 'Pagar Cuota',
+  stepInfo: 'Información de Pago',
+  stepVerification: 'Verificación',
+  stepReceipt: 'Recibo',
+  selectInstallment: 'Selecciona la cuota a pagar',
+  selectAccount: 'Selecciona la cuenta de origen',
+  paymentTypeLocal: 'Cuenta Local',
+  paymentTypeSinpe: 'SINPE (DTR)',
+  sinpeIban: 'IBAN SINPE',
+  sinpeIbanPlaceholder: 'Ingresa el IBAN de tu cuenta SINPE',
+  pay: 'Pagar',
+  receiptTitle: 'Recibo de Pago',
+  receiptOperation: 'Número de Operación',
+  receiptInstallment: 'Cuota Pagada',
+  receiptAmount: 'Monto Pagado',
+  receiptDate: 'Fecha de Pago',
+  receiptBalance: 'Saldo Restante',
+  receiptNumber: 'Número de Recibo',
+  close: 'Cerrar',
+  successMessage: 'El pago se procesó correctamente.',
+  errorMessage: 'Error al procesar el pago.',
+} as const;
