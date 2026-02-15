@@ -17,6 +17,11 @@ interface FavoriteDataStepProps {
   maxAmountLabel?: string;
   maxAmountPlaceholder?: string;
   showMaxAmount?: boolean;
+  phone?: string;
+  onPhoneChange?: (value: string) => void;
+  phoneLabel?: string;
+  phonePlaceholder?: string;
+  showPhone?: boolean;
 }
 
 export default function FavoriteDataStep({
@@ -33,6 +38,11 @@ export default function FavoriteDataStep({
   maxAmountLabel = 'Monto Máximo (Opcional)',
   maxAmountPlaceholder = '0.00',
   showMaxAmount = true,
+  phone = '',
+  onPhoneChange,
+  phoneLabel = 'Teléfono (Opcional)',
+  phonePlaceholder = '88887777',
+  showPhone = false,
 }: FavoriteDataStepProps) {
   const colorScheme = useColorScheme();
 
@@ -40,6 +50,11 @@ export default function FavoriteDataStep({
     if (value === '' || /^\d*\.?\d*$/.test(value)) {
       onMaxAmountChange(value);
     }
+  };
+
+  const handlePhoneChange = (value: string) => {
+    const digitsOnly = value.replace(/\D/g, '').slice(0, 8);
+    onPhoneChange?.(digitsOnly);
   };
 
   return (
@@ -61,6 +76,16 @@ export default function FavoriteDataStep({
         error={email && !isEmailValid(email) ? 'Correo electrónico no válido' : undefined}
         colorScheme={colorScheme}
       />
+      {showPhone && (
+        <Input
+          label={phoneLabel}
+          placeholder={phonePlaceholder}
+          value={phone}
+          onChangeText={handlePhoneChange}
+          keyboardType="phone-pad"
+          colorScheme={colorScheme}
+        />
+      )}
       {showMaxAmount && (
         <Input
           label={maxAmountLabel}

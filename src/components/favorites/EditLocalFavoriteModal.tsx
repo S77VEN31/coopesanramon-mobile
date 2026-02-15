@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, Pressable, ScrollView, StyleSheet, useColorScheme, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Modal, View, Text, TouchableWithoutFeedback, StyleSheet, useColorScheme, TouchableOpacity } from 'react-native';
 import { X } from 'lucide-react-native';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
+import TransferWizard from '@/components/wizard/TransferWizard';
+import MessageCard from '@/components/cards/MessageCard';
+import { TwoFactorStep, FavoriteDataStep } from '@/components/wizard/steps';
 import { useFavoriteAccountsStore } from '@/lib/states/favoriteAccounts.store';
-import { useSecondFactorStore } from '@/lib/states/secondFactor.store';
+import { useSecondFactorStore, requiresOtp, requiresEmail } from '@/lib/states/secondFactor.store';
 import { TipoOperacion } from '@/constants/enums';
 import { FAVORITE_TEXTS } from '@/constants/favorite-accounts.constants';
-import { getCardBackgroundColor, getTextColor, getSecondaryTextColor, getBorderColor } from '../../../App';
+import { getCardBackgroundColor, getTextColor, getSecondaryTextColor, getBorderColor, getCardBgColor } from '../../../App';
 
 export default function EditLocalFavoriteModal() {
   const colorScheme = useColorScheme();
@@ -21,16 +22,35 @@ export default function EditLocalFavoriteModal() {
     closeEditModal,
     selectedAccount,
     updateFavoriteAccount,
-    isUpdating,
   } = useFavoriteAccountsStore();
 
-  const { openModal: open2FAModal } = useSecondFactorStore();
+  const {
+    currentChallenge,
+    isCreatingChallenge,
+    isValidating,
+    isExecutingOperation,
+    validationError,
+    operationError,
+    remainingAttempts,
+    timeRemaining,
+    createdesafio,
+    validatedesafio,
+    resetState: reset2FAState,
+    startCountdown,
+    stopCountdown,
+  } = useSecondFactorStore();
 
   const [alias, setAlias] = useState('');
   const [email, setEmail] = useState('');
   const [telefono, setTelefono] = useState('');
   const [montoMaximo, setMontoMaximo] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [emailCode, setEmailCode] = useState('');
+  const [has2FAStepBeenInitialized, setHas2FAStepBeenInitialized] = useState(false);
+  const [operationComplete, setOperationComplete] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
+  // Pre-populate fields when selectedAccount changes
   useEffect(() => {
     if (selectedAccount) {
       setAlias(selectedAccount.alias || '');
@@ -40,13 +60,58 @@ export default function EditLocalFavoriteModal() {
     }
   }, [selectedAccount]);
 
+  const resetForm = () => {
+    setAlias('');
+    setEmail('');
+    setTelefono('');
+    setMontoMaximo('');
+    setOtpCode('');
+    setEmailCode('');
+    setHas2FAStepBeenInitialized(false);
+    setOperationComplete(false);
+    setIsProcessing(false);
+    reset2FAState();
+  };
+
   const handleClose = () => {
+    resetForm();
     closeEditModal();
   };
 
-  const handleSave = () => {
+  const handleRetryChallenge = () => {
+    setOtpCode('');
+    setEmailCode('');
+    reset2FAState();
+    setHas2FAStepBeenInitialized(false);
+  };
+
+  const handleWizardComplete = async () => {
+    if (!currentChallenge) return;
+
+    setIsProcessing(true);
+
+    const hasRequiredChallenges = currentChallenge?.retosSolicitados !== null && currentChallenge?.retosSolicitados !== undefined && currentChallenge.retosSolicitados.length > 0;
+
+    if (!hasRequiredChallenges) {
+      await handleUpdateAccount(null);
+      return;
+    }
+
+    const finalOtp = requiresOtp(currentChallenge?.retosSolicitados || null) ? otpCode : undefined;
+    const finalEmail = requiresEmail(currentChallenge?.retosSolicitados || null) ? emailCode : undefined;
+
+    const isValid = await validatedesafio(finalOtp, finalEmail);
+
+    if (isValid) {
+      await handleUpdateAccount(currentChallenge?.idDesafioPublico || null);
+    } else {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleUpdateAccount = async (idDesafio: string | null) => {
     if (!selectedAccount) return;
-    open2FAModal(TipoOperacion.EdicionCuentaFavoritaInterna, async (idDesafio) => {
+    try {
       await updateFavoriteAccount({
         id: selectedAccount.id,
         email: email || null,
@@ -55,50 +120,159 @@ export default function EditLocalFavoriteModal() {
         montoMaximo: montoMaximo ? parseFloat(montoMaximo) : null,
         idDesafio: idDesafio,
       });
-      handleClose();
-      Alert.alert('Exito', FAVORITE_TEXTS.SUCCESS_UPDATE);
-    });
+      setIsProcessing(false);
+      setOperationComplete(true);
+    } catch (error) {
+      setIsProcessing(false);
+    }
   };
+
+  // Auto-create 2FA challenge when needed
+  useEffect(() => {
+    if (isEditModalOpen && !currentChallenge && !isCreatingChallenge && !has2FAStepBeenInitialized && selectedAccount) {
+      setHas2FAStepBeenInitialized(true);
+      createdesafio(TipoOperacion.EdicionCuentaFavoritaInterna).then((challenge) => {
+        if (challenge && challenge.tiempoExpiracionSegundos != null && challenge.tiempoExpiracionSegundos > 0) {
+          startCountdown();
+        }
+      });
+    }
+  }, [isEditModalOpen, currentChallenge, isCreatingChallenge, has2FAStepBeenInitialized, selectedAccount, createdesafio, startCountdown]);
+
+  // Cleanup countdown when modal closes
+  useEffect(() => {
+    if (!isEditModalOpen) {
+      stopCountdown();
+    }
+  }, [isEditModalOpen, stopCountdown]);
+
+  const wizardSteps = useMemo(() => [
+    {
+      id: 'data',
+      title: FAVORITE_TEXTS.STEP_DATA,
+      component: (
+        <View style={styles.stepContent}>
+          <View style={[styles.accountCard, { borderColor, backgroundColor: getCardBgColor(colorScheme) }]}>
+            <Text style={[styles.accountLabel, { color: secondaryTextColor }]}>Titular</Text>
+            <Text style={[styles.accountValue, { color: textColor }]}>{selectedAccount?.titular || '-'}</Text>
+            <Text style={[styles.accountLabel, { color: secondaryTextColor }]}>Cuenta</Text>
+            <Text style={[styles.accountValue, { color: textColor }]}>{selectedAccount?.numeroCuenta || '-'}</Text>
+          </View>
+
+          <FavoriteDataStep
+            alias={alias}
+            onAliasChange={setAlias}
+            email={email}
+            onEmailChange={setEmail}
+            maxAmount={montoMaximo}
+            onMaxAmountChange={setMontoMaximo}
+            aliasLabel={FAVORITE_TEXTS.FIELD_ALIAS}
+            aliasPlaceholder="Ej: Mi cuenta"
+            emailLabel={FAVORITE_TEXTS.FIELD_EMAIL}
+            emailPlaceholder="correo@ejemplo.com"
+            maxAmountLabel={FAVORITE_TEXTS.FIELD_MAX_AMOUNT}
+            maxAmountPlaceholder="0.00"
+            showPhone={true}
+            phone={telefono}
+            onPhoneChange={setTelefono}
+            phoneLabel={FAVORITE_TEXTS.FIELD_PHONE}
+            phonePlaceholder="88887777"
+          />
+        </View>
+      ),
+      canGoNext: () => true,
+    },
+    {
+      id: 'verification',
+      title: 'Verificación de Seguridad',
+      component: (
+        <View style={styles.verificationContent}>
+          {operationComplete ? (
+            <MessageCard
+              type="success"
+              message={FAVORITE_TEXTS.SUCCESS_UPDATE}
+              style={[styles.messageCard, { borderColor, backgroundColor: getCardBgColor(colorScheme) }]}
+            />
+          ) : isProcessing ? (
+            <MessageCard
+              type="loading"
+              message="Procesando operación..."
+              description="Por favor espera mientras se completa la verificación"
+              style={[styles.messageCard, { borderColor, backgroundColor: getCardBgColor(colorScheme) }]}
+            />
+          ) : (
+            <TwoFactorStep
+              currentChallenge={currentChallenge}
+              isCreatingChallenge={isCreatingChallenge}
+              isValidating={isValidating}
+              isExecutingOperation={isExecutingOperation}
+              validationError={validationError}
+              operationError={operationError}
+              remainingAttempts={remainingAttempts}
+              timeRemaining={timeRemaining}
+              otpCode={otpCode}
+              emailCode={emailCode}
+              onOtpCodeChange={setOtpCode}
+              onEmailCodeChange={setEmailCode}
+              onRetryChallenge={handleRetryChallenge}
+              isRetrying={isCreatingChallenge}
+            />
+          )}
+        </View>
+      ),
+      hideNavigation: () => isProcessing,
+      fallbackButton: {
+        label: 'Cerrar',
+        onPress: handleClose,
+        show: () => operationComplete,
+      },
+      canGoNext: () => {
+        if (operationComplete) return false;
+        if (!currentChallenge) return false;
+        if (isValidating || isExecutingOperation) return false;
+        if (timeRemaining <= 0) return false;
+        if (remainingAttempts <= 0) return false;
+
+        const hasRequiredChallenges = currentChallenge.retosSolicitados !== null && currentChallenge.retosSolicitados.length > 0;
+        if (!hasRequiredChallenges) return true;
+
+        if (requiresOtp(currentChallenge.retosSolicitados) && otpCode.length !== 6) return false;
+        if (requiresEmail(currentChallenge.retosSolicitados) && emailCode.length !== 6) return false;
+
+        return true;
+      },
+      onLeave: () => {
+        setOtpCode('');
+        setEmailCode('');
+        reset2FAState();
+        setHas2FAStepBeenInitialized(false);
+      },
+    },
+  ], [alias, email, telefono, montoMaximo, selectedAccount, currentChallenge, isCreatingChallenge, isValidating, isExecutingOperation, validationError, operationError, remainingAttempts, timeRemaining, otpCode, emailCode, operationComplete, isProcessing, colorScheme, textColor, secondaryTextColor, borderColor]);
 
   if (!isEditModalOpen || !selectedAccount) return null;
 
   return (
     <Modal visible={isEditModalOpen} transparent animationType="slide" onRequestClose={handleClose}>
-      <Pressable style={styles.modalBackdrop} onPress={handleClose}>
-        <Pressable style={[styles.modalContent, { backgroundColor }]} onPress={(e) => e.stopPropagation()}>
+      <View style={styles.modalBackdrop}>
+        <TouchableWithoutFeedback onPress={handleClose}>
+          <View style={styles.backdropOverlay} />
+        </TouchableWithoutFeedback>
+        <View style={[styles.modalContent, { backgroundColor }]}>
           <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
-            <Text style={[styles.modalTitle, { color: '#a61612' }]}>{FAVORITE_TEXTS.EDIT_LOCAL_TITLE}</Text>
+            <Text style={[styles.modalTitle, { color: colorScheme === 'dark' ? '#ffffff' : '#a61612' }]}>{FAVORITE_TEXTS.EDIT_LOCAL_TITLE}</Text>
             <TouchableOpacity onPress={handleClose}>
               <X size={24} color={textColor} />
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalScrollView} contentContainerStyle={styles.modalScrollContent} showsVerticalScrollIndicator={false}>
-            <View style={[styles.accountCard, { borderColor }]}>
-              <Text style={[styles.accountLabel, { color: secondaryTextColor }]}>Titular</Text>
-              <Text style={[styles.accountValue, { color: textColor }]}>{selectedAccount.titular || '-'}</Text>
-              <Text style={[styles.accountLabel, { color: secondaryTextColor }]}>Cuenta</Text>
-              <Text style={[styles.accountValue, { color: textColor }]}>{selectedAccount.numeroCuenta || '-'}</Text>
-            </View>
-
-            <View style={styles.fieldsContainer}>
-              <Input label={FAVORITE_TEXTS.FIELD_ALIAS} placeholder="Ej: Mi cuenta" value={alias} onChangeText={setAlias} colorScheme={colorScheme} />
-              <Input label={FAVORITE_TEXTS.FIELD_EMAIL} placeholder="correo@ejemplo.com" value={email} onChangeText={setEmail} keyboardType="email-address" colorScheme={colorScheme} />
-              <Input label={FAVORITE_TEXTS.FIELD_PHONE} placeholder="88887777" value={telefono} onChangeText={(v) => setTelefono(v.replace(/\D/g, '').slice(0, 8))} keyboardType="phone-pad" colorScheme={colorScheme} />
-              <Input label={FAVORITE_TEXTS.FIELD_MAX_AMOUNT} placeholder="0.00" value={montoMaximo} onChangeText={(v) => { if (v === '' || /^\d*\.?\d*$/.test(v)) setMontoMaximo(v); }} keyboardType="numeric" colorScheme={colorScheme} />
-            </View>
-          </ScrollView>
-
-          <View style={[styles.modalFooter, { borderTopColor: borderColor }]}>
-            <Button variant="outline" size="sm" onPress={handleClose} disabled={isUpdating} style={styles.footerButton}>
-              {FAVORITE_TEXTS.CANCEL_BUTTON}
-            </Button>
-            <Button size="sm" onPress={handleSave} loading={isUpdating} disabled={isUpdating} style={styles.footerButton}>
-              {FAVORITE_TEXTS.SAVE_BUTTON}
-            </Button>
-          </View>
-        </Pressable>
-      </Pressable>
+          <TransferWizard
+            steps={wizardSteps}
+            onComplete={handleWizardComplete}
+            onCancel={handleClose}
+          />
+        </View>
+      </View>
     </Modal>
   );
 }
@@ -109,11 +283,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
+  backdropOverlay: {
+    flex: 1,
+  },
   modalContent: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: '60%',
-    height: '60%',
+    maxHeight: '80%',
+    height: '80%',
     flexDirection: 'column',
   },
   modalHeader: {
@@ -128,26 +305,24 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
   },
-  modalScrollView: {
-    flex: 1,
+  messageCard: {
+    borderWidth: 1,
+    borderRadius: 12,
+    flex: 0,
+    minHeight: 0,
   },
-  modalScrollContent: {
-    padding: 20,
-    gap: 16,
-    flexGrow: 1,
-  },
-  fieldsContainer: {
-    gap: 12,
-  },
-  modalFooter: {
-    flexDirection: 'row',
-    gap: 12,
+  stepContent: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderTopWidth: 1,
+    paddingTop: 16,
+    paddingBottom: 40,
+    flexGrow: 1,
+    gap: 16,
   },
-  footerButton: {
-    flex: 1,
+  verificationContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   accountCard: {
     borderWidth: 1,
