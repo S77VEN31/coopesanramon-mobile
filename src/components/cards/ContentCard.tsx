@@ -56,7 +56,7 @@ export default function ContentCard({
       <ScrollView
         style={fullHeight ? styles.scrollView : undefined}
         contentContainerStyle={[styles.content, contentClassName]}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
         refreshControl={refreshControl}
       >
         {children}

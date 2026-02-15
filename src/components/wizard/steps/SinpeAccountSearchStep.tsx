@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, useColorScheme } from 'react-native';
+import { View, StyleSheet, useColorScheme } from 'react-native';
 import { IbanInput } from '@/components/ui/IbanInput';
 import MessageCard from '@/components/cards/MessageCard';
-import { getTextColor, getSecondaryTextColor, getBorderColor, getCardBgColor } from '../../../../App';
+import SinpeInfoCard from '@/components/cards/SinpeInfoCard';
+import { getBorderColor, getCardBgColor } from '../../../../App';
 
 interface ValidatedAccount {
   titularDestino: string | null;
@@ -36,8 +37,6 @@ export default function SinpeAccountSearchStep({
   searchLabel = 'Número de Cuenta IBAN',
 }: SinpeAccountSearchStepProps) {
   const colorScheme = useColorScheme();
-  const textColor = getTextColor(colorScheme);
-  const secondaryTextColor = getSecondaryTextColor(colorScheme);
   const borderColor = getBorderColor(colorScheme);
 
   return (
@@ -63,24 +62,12 @@ export default function SinpeAccountSearchStep({
       )}
 
       {validatedAccount && !isLoading && (
-        <View style={[styles.accountCard, { borderColor }]}>
-          <Text style={[styles.accountLabel, { color: secondaryTextColor }]}>Titular</Text>
-          <Text style={[styles.accountValue, { color: textColor }]}>
-            {validatedAccount.titularDestino || '-'}
-          </Text>
-          <Text style={[styles.accountLabel, { color: secondaryTextColor }]}>IBAN</Text>
-          <Text style={[styles.accountValue, { color: textColor }]}>
-            {validatedAccount.numeroCuentaDestino || '-'}
-          </Text>
-          <Text style={[styles.accountLabel, { color: secondaryTextColor }]}>Banco</Text>
-          <Text style={[styles.accountValue, { color: textColor }]}>
-            {validatedAccount.codigoBancoDestino || '-'}
-          </Text>
-          <Text style={[styles.accountLabel, { color: secondaryTextColor }]}>Moneda</Text>
-          <Text style={[styles.accountValue, { color: textColor }]}>
-            {validatedAccount.codigoMonedaDestino || '-'}
-          </Text>
-        </View>
+        <SinpeInfoCard
+          titular={validatedAccount.titularDestino || null}
+          iban={validatedAccount.numeroCuentaDestino || null}
+          banco={validatedAccount.codigoBancoDestino || null}
+          moneda={validatedAccount.codigoMonedaDestino || null}
+        />
       )}
     </View>
   );
@@ -95,19 +82,5 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     flex: 0,
     minHeight: 0,
-  },
-  accountCard: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-  },
-  accountLabel: {
-    fontSize: 12,
-    marginBottom: 2,
-  },
-  accountValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 8,
   },
 });

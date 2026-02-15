@@ -8,6 +8,7 @@ import { useFavoriteAccountsStore } from '@/lib/states/favoriteAccounts.store';
 import { useSecondFactorStore, requiresOtp, requiresEmail } from '@/lib/states/secondFactor.store';
 import { TipoOperacion } from '@/constants/enums';
 import { FAVORITE_TEXTS } from '@/constants/favorite-accounts.constants';
+import { isEmailValid } from '@/lib/utils/email.utils';
 import { getCardBackgroundColor, getTextColor, getSecondaryTextColor, getBorderColor, getCardBgColor } from '../../../App';
 
 export default function CreateLocalFavoriteModal() {
@@ -226,14 +227,16 @@ export default function CreateLocalFavoriteModal() {
             maxAmountLabel={FAVORITE_TEXTS.FIELD_MAX_AMOUNT}
             maxAmountPlaceholder="0.00"
             showPhone={true}
-            phone={telefono}
             onPhoneChange={setTelefono}
             phoneLabel={FAVORITE_TEXTS.FIELD_PHONE}
-            phonePlaceholder="88887777"
           />
         </View>
       ),
-      canGoNext: () => true,
+      canGoNext: () => {
+        if (alias.trim().length < 4) return false;
+        if (email && !isEmailValid(email)) return false;
+        return true;
+      },
       onLeave: () => {
         setAlias('');
         setEmail('');

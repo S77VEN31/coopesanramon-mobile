@@ -6,7 +6,7 @@ import { useAuthStore } from '@/lib/states/auth.store';
 import { useFavoriteAccountsStore } from '@/lib/states/favoriteAccounts.store';
 import { useFavoriteSinpeAccountsStore } from '@/lib/states/favoriteSinpeAccounts.store';
 import { useFavoriteWalletsStore } from '@/lib/states/favoriteWallets.store';
-import { getBackgroundColor, getTextColor, getSecondaryTextColor } from '../../App';
+import { getBackgroundColor } from '../../App';
 import ContentCard from '@/components/cards/ContentCard';
 import CustomHeader from '@/components/header/CustomHeader';
 import { Search, Plus, X } from 'lucide-react-native';
@@ -19,7 +19,7 @@ import EditLocalFavoriteModal from '@/components/favorites/EditLocalFavoriteModa
 import EditSinpeFavoriteModal from '@/components/favorites/EditSinpeFavoriteModal';
 import EditWalletFavoriteModal from '@/components/favorites/EditWalletFavoriteModal';
 import TwoFAVerificationModal from '@/components/modals/TwoFAVerificationModal';
-import { FAVORITE_TEXTS, type FavoriteType } from '@/constants/favorite-accounts.constants';
+import { FAVORITE_TEXTS } from '@/constants/favorite-accounts.constants';
 import type { CuentaFavoritaInternaItem, CuentaSinpeFavoritaItem, MonederoFavoritoItem } from '@/services/api/favorites.api';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'MyFavoriteAccounts'>;
@@ -71,11 +71,7 @@ export default function MyFavoriteAccountsScreen({ route, navigation }: Props) {
   } = useFavoriteWalletsStore();
 
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [accountToDelete, setAccountToDelete] = useState<{
-    id: number;
-    name: string;
-    number: string;
-  } | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<CuentaFavoritaInternaItem | CuentaSinpeFavoritaItem | MonederoFavoritoItem | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   useLayoutEffect(() => {
@@ -228,38 +224,23 @@ export default function MyFavoriteAccountsScreen({ route, navigation }: Props) {
   };
 
   const handleDelete = (item: CuentaFavoritaInternaItem | CuentaSinpeFavoritaItem | MonederoFavoritoItem) => {
-    let name = '';
-    let number = '';
-    if (type === 'local') {
-      const acc = item as CuentaFavoritaInternaItem;
-      name = acc.titular || 'Sin titular';
-      number = acc.numeroCuenta || '';
-    } else if (type === 'sinpe') {
-      const acc = item as CuentaSinpeFavoritaItem;
-      name = acc.titularDestino || 'Sin titular';
-      number = acc.numeroCuentaDestino || '';
-    } else if (type === 'wallets') {
-      const acc = item as MonederoFavoritoItem;
-      name = acc.titular || 'Sin titular';
-      number = acc.monedero || '';
-    }
-    setAccountToDelete({ id: item.id, name, number });
+    setItemToDelete(item);
     setDeleteModalVisible(true);
   };
 
   const handleDeleteConfirm = async () => {
-    if (!accountToDelete) return;
+    if (!itemToDelete) return;
     let success = false;
     if (type === 'local') {
-      success = await deleteInternalAccount(accountToDelete.id);
+      success = await deleteInternalAccount(itemToDelete.id);
     } else if (type === 'sinpe') {
-      success = await deleteSinpeAccount(accountToDelete.id);
+      success = await deleteSinpeAccount(itemToDelete.id);
     } else if (type === 'wallets') {
-      success = await deleteFavoriteWallet(accountToDelete.id);
+      success = await deleteFavoriteWallet(itemToDelete.id);
     }
     if (success) {
       setDeleteModalVisible(false);
-      setAccountToDelete(null);
+      setItemToDelete(null);
     }
   };
 
@@ -307,12 +288,12 @@ export default function MyFavoriteAccountsScreen({ route, navigation }: Props) {
         visible={deleteModalVisible}
         onClose={() => {
           setDeleteModalVisible(false);
-          setAccountToDelete(null);
+          setItemToDelete(null);
         }}
         onConfirm={handleDeleteConfirm}
         isDeleting={isDeleting}
-        accountName={accountToDelete?.name || ''}
-        accountNumber={accountToDelete?.number || ''}
+        type={type}
+        item={itemToDelete}
       />
 
       <TwoFAVerificationModal title="Confirmar Operacion" />

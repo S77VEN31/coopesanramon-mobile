@@ -18,6 +18,7 @@ import PaymentPlanScreen from '@/screens/PaymentPlanScreen';
 import PaymentsScreen from '@/screens/PaymentsScreen';
 import TimeDepositsScreen from '@/screens/TimeDepositsScreen';
 import MyInvestmentsScreen from '@/screens/MyInvestmentsScreen';
+import InvestmentDetailScreen from '@/screens/InvestmentDetailScreen';
 import CouponsScreen from '@/screens/CouponsScreen';
 import FavoriteAccountsScreen from '@/screens/FavoriteAccountsScreen';
 import MyFavoriteAccountsScreen from '@/screens/MyFavoriteAccountsScreen';
@@ -165,6 +166,14 @@ function MainNavigator() {
         options={{
           headerShown: true,
           header: () => <CustomHeader title="Mis Inversiones" showBackButton={true} />,
+        }}
+      />
+      <MainStack.Screen
+        name="InvestmentDetail"
+        component={InvestmentDetailScreen}
+        options={{
+          headerShown: true,
+          header: () => <CustomHeader title="Detalle de Inversión" showBackButton={true} />,
         }}
       />
       <MainStack.Screen

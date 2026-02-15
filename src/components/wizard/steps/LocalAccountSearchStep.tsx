@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, useColorScheme } from 'react-native';
+import { View, StyleSheet, useColorScheme } from 'react-native';
 import { IbanInput } from '@/components/ui/IbanInput';
 import MessageCard from '@/components/cards/MessageCard';
-import { getTextColor, getSecondaryTextColor, getBorderColor, getCardBgColor } from '../../../../App';
+import LocalInfoCard from '@/components/cards/LocalInfoCard';
+import { getBorderColor, getCardBgColor } from '../../../../App';
 
 interface ValidatedAccount {
   titular: string | null;
@@ -35,8 +36,6 @@ export default function LocalAccountSearchStep({
   searchLabel = 'Número de Cuenta IBAN',
 }: LocalAccountSearchStepProps) {
   const colorScheme = useColorScheme();
-  const textColor = getTextColor(colorScheme);
-  const secondaryTextColor = getSecondaryTextColor(colorScheme);
   const borderColor = getBorderColor(colorScheme);
 
   return (
@@ -62,20 +61,11 @@ export default function LocalAccountSearchStep({
       )}
 
       {validatedAccount && !isLoading && (
-        <View style={[styles.accountCard, { borderColor }]}>
-          <Text style={[styles.accountLabel, { color: secondaryTextColor }]}>Titular</Text>
-          <Text style={[styles.accountValue, { color: textColor }]}>
-            {validatedAccount.titular || '-'}
-          </Text>
-          <Text style={[styles.accountLabel, { color: secondaryTextColor }]}>IBAN</Text>
-          <Text style={[styles.accountValue, { color: textColor }]}>
-            {validatedAccount.cuentaIBAN || '-'}
-          </Text>
-          <Text style={[styles.accountLabel, { color: secondaryTextColor }]}>Moneda</Text>
-          <Text style={[styles.accountValue, { color: textColor }]}>
-            {validatedAccount.codigoMoneda || '-'}
-          </Text>
-        </View>
+        <LocalInfoCard
+          titular={validatedAccount.titular || null}
+          numeroCuenta={validatedAccount.cuentaIBAN || null}
+          moneda={validatedAccount.codigoMoneda || null}
+        />
       )}
     </View>
   );
@@ -90,19 +80,5 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     flex: 0,
     minHeight: 0,
-  },
-  accountCard: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-  },
-  accountLabel: {
-    fontSize: 12,
-    marginBottom: 2,
-  },
-  accountValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 8,
   },
 });

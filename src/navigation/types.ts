@@ -1,4 +1,5 @@
 import type { NavigatorScreenParams } from '@react-navigation/native';
+import type { DtoInversion } from '../services/api/investments.api';
 
 export type RootStackParamList = {
   AuthStack: NavigatorScreenParams<AuthStackParamList>;
@@ -16,6 +17,7 @@ export type MainStackParamList = {
   PaymentPlan: undefined;
   Payments: undefined;
   MyInvestments: undefined;
+  InvestmentDetail: { investment: DtoInversion };
   Coupons: { numeroInversion?: string } | undefined;
   MyFavoriteAccounts: { type: 'local' | 'sinpe' | 'wallets' };
 };

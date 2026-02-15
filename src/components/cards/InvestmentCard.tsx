@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useColorScheme } from 'react-native';
-import { TrendingUp } from 'lucide-react-native';
-import { Card, CardContent } from '../ui/Card';
+import { TrendingUp, Calendar, Clock } from 'lucide-react-native';
+import { Card, CardHeader, CardContent } from '../ui/Card';
+import DetailField from '../ui/DetailField';
 import { getTextColor, getSecondaryTextColor, getBorderColor } from '../../../App';
 import { type DtoInversion } from '../../services/api/investments.api';
 import { TIPO_INVERSION_LABELS, TIPO_TASA_INTERES_LABELS } from '../../constants/investments.constants';
@@ -32,50 +33,59 @@ export default function InvestmentCard({ investment, onPress }: InvestmentCardPr
       ]}
     >
       <Card style={styles.card} colorScheme={colorScheme}>
-        <View style={styles.topBorder} />
-        <CardContent style={styles.content}>
-          <View style={styles.topSection}>
-            <View style={styles.iconContainer}>
-              <TrendingUp size={20} color="#a61612" />
+        <CardHeader style={styles.header}>
+          <View style={styles.headerContent}>
+            <View style={styles.headerIconContainer}>
+              <TrendingUp size={16} color="#ffffff" />
             </View>
-            <View style={styles.investmentInfo}>
-              <Text style={[styles.tipoLabel, { color: textColor }]}>
+            <View style={styles.headerTextContainer}>
+              <Text style={styles.headerTitle} numberOfLines={1}>
                 {tipoLabel}
               </Text>
               {investment.numeroInversion && (
-                <Text style={[styles.operacion, { color: secondaryTextColor }]} numberOfLines={1}>
+                <Text style={styles.headerSubtitle} numberOfLines={1}>
                   No. {investment.numeroInversion}
                 </Text>
               )}
             </View>
-            {tasaLabel ? (
-              <View style={styles.tasaBadge}>
-                <Text style={styles.tasaText}>{tasaLabel}</Text>
-              </View>
-            ) : null}
           </View>
+          {tasaLabel ? (
+            <View style={styles.tasaBadge}>
+              <Text style={styles.tasaText}>{tasaLabel}</Text>
+            </View>
+          ) : null}
+        </CardHeader>
 
-          <View style={styles.detailRow}>
-            <Text style={[styles.detailLabel, { color: secondaryTextColor }]}>Plazo</Text>
-            <Text style={[styles.detailValue, { color: textColor }]}>{investment.plazo} días</Text>
-          </View>
-
-          <View style={styles.detailRow}>
-            <Text style={[styles.detailLabel, { color: secondaryTextColor }]}>Vencimiento</Text>
-            <Text style={[styles.detailValue, { color: textColor }]}>{formatDate(investment.fechaVencimiento)}</Text>
-          </View>
-
-          <View style={[styles.footerSection, { borderTopColor: borderColor }]}>
-            <View style={styles.montoColumn}>
-              <Text style={[styles.montoLabel, { color: secondaryTextColor }]}>Monto</Text>
-              <Text style={[styles.montoValue, { color: textColor }]}>
+        <CardContent style={styles.body}>
+          <View style={styles.amountSection}>
+            <Text style={[styles.amountLabel, { color: secondaryTextColor }]}>Monto</Text>
+            <View style={styles.amountRow}>
+              <Text style={[styles.amountValue, { color: textColor }]}>
                 {formatCurrency(investment.monto, moneda)}
               </Text>
+              <View style={styles.currencyBadge}>
+                <Text style={styles.currencyBadgeText}>{moneda}</Text>
+              </View>
             </View>
-            <View style={styles.monedaColumn}>
-              <Text style={[styles.monedaLabel, { color: secondaryTextColor }]}>Moneda</Text>
-              <Text style={[styles.monedaValue, { color: textColor }]}>{moneda}</Text>
-            </View>
+          </View>
+
+          <View style={[styles.detailsSection, { borderTopColor: borderColor }]}>
+            <DetailField
+              icon={Clock}
+              label="Plazo"
+              showDivider={true}
+              value={
+                <Text style={[styles.detailValue, { color: textColor }]}>{investment.plazo} días</Text>
+              }
+            />
+            <DetailField
+              icon={Calendar}
+              label="Vencimiento"
+              showDivider={false}
+              value={
+                <Text style={[styles.detailValue, { color: textColor }]}>{formatDate(investment.fechaVencimiento)}</Text>
+              }
+            />
           </View>
         </CardContent>
       </Card>
@@ -84,113 +94,102 @@ export default function InvestmentCard({ investment, onPress }: InvestmentCardPr
 }
 
 const styles = StyleSheet.create({
-  pressable: {
-    marginBottom: 12,
-  },
+  pressable: {},
   pressablePressed: {
     transform: [{ scale: 0.98 }],
   },
   card: {
-    marginBottom: 0,
     overflow: 'hidden',
   },
-  topBorder: {
-    height: 4,
+  header: {
     backgroundColor: '#a61612',
-    width: '100%',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
-  },
-  content: {
-    paddingVertical: 18,
-    paddingHorizontal: 18,
-  },
-  topSection: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-    gap: 12,
-  },
-  iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#a61612',
-    backgroundColor: 'rgba(166, 22, 18, 0.1)',
-    flexShrink: 0,
+    justifyContent: 'space-between',
   },
-  investmentInfo: {
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     flex: 1,
     minWidth: 0,
-    paddingTop: 4,
   },
-  tipoLabel: {
+  headerIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  headerTextContainer: {
+    flex: 1,
+    minWidth: 0,
+  },
+  headerTitle: {
     fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 2,
+    fontWeight: '700',
+    color: '#ffffff',
   },
-  operacion: {
-    fontSize: 13,
-    opacity: 0.8,
+  headerSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginTop: 1,
   },
   tasaBadge: {
-    backgroundColor: 'rgba(166, 22, 18, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(166, 22, 18, 0.2)',
     flexShrink: 0,
+    marginLeft: 8,
   },
   tasaText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  body: {
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  amountSection: {
+    marginBottom: 4,
+  },
+  amountLabel: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#a61612',
+    marginBottom: 4,
   },
-  detailRow: {
+  amountRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    gap: 10,
   },
-  detailLabel: {
-    fontSize: 13,
+  amountValue: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  currencyBadge: {
+    backgroundColor: '#a61612',
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  currencyBadgeText: {
+    fontSize: 11,
+    color: '#ffffff',
+    fontWeight: '600',
+  },
+  detailsSection: {
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   detailValue: {
     fontSize: 13,
-    fontWeight: '500',
-  },
-  footerSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    paddingTop: 12,
-    marginTop: 6,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  montoColumn: {
-    flex: 1,
-  },
-  montoLabel: {
-    fontSize: 11,
-    marginBottom: 2,
-  },
-  montoValue: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  monedaColumn: {
-    alignItems: 'flex-end',
-  },
-  monedaLabel: {
-    fontSize: 11,
-    marginBottom: 2,
-  },
-  monedaValue: {
-    fontSize: 14,
     fontWeight: '600',
   },
 });

@@ -4,11 +4,9 @@ import { useColorScheme } from 'react-native';
 import {
   Banknote,
   Building2,
-  CheckCircle2,
   CreditCard,
   Lock,
   TrendingUp,
-  XCircle,
 } from 'lucide-react-native';
 import { Card, CardContent } from '../ui/Card';
 import DetailField from '../ui/DetailField';
@@ -31,7 +29,9 @@ interface AccountDetailCardProps {
 
 export default function AccountDetailCard({ account }: AccountDetailCardProps) {
   const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const textColor = getTextColor(colorScheme);
+  const balanceColor = isDark ? '#ffffff' : '#a61612';
 
   // Estado de la cuenta
   const estadoCuenta = account.estadoCuenta ?? EstadoCuenta.Inactiva;
@@ -43,44 +43,28 @@ export default function AccountDetailCard({ account }: AccountDetailCardProps) {
     estadoCuenta === EstadoCuenta.Bloqueada ||
     estadoCuenta === EstadoCuenta.Cerrada;
 
-  const renderStatus = () => {
+  const getStatusInfo = () => {
     if (isActive) {
-      return (
-        <View style={styles.statusContainer}>
-          <CheckCircle2 size={16} color="#16a34a" />
-          <Text style={styles.statusTextActive}>
-            {estadoCuenta === EstadoCuenta.ActivaSoloParaAcreditar
-              ? ACCOUNT_DETAIL_STATUS_LABELS.activeCreditOnly
-              : estadoCuenta === EstadoCuenta.ActivaSoloParaDebitar
-              ? ACCOUNT_DETAIL_STATUS_LABELS.activeDebitOnly
-              : ACCOUNT_DETAIL_STATUS_LABELS.active}
-          </Text>
-        </View>
-      );
+      const label = estadoCuenta === EstadoCuenta.ActivaSoloParaAcreditar
+        ? ACCOUNT_DETAIL_STATUS_LABELS.activeCreditOnly
+        : estadoCuenta === EstadoCuenta.ActivaSoloParaDebitar
+        ? ACCOUNT_DETAIL_STATUS_LABELS.activeDebitOnly
+        : ACCOUNT_DETAIL_STATUS_LABELS.active;
+      return { label, bg: '#16a34a', text: '#ffffff' };
     } else if (isBlockedOrClosed) {
-      return (
-        <View style={styles.statusContainer}>
-          <Lock size={16} color="#dc2626" />
-          <Text style={styles.statusTextBlocked}>
-            {estadoCuenta === EstadoCuenta.Cerrada
-              ? ACCOUNT_DETAIL_STATUS_LABELS.closed
-              : ACCOUNT_DETAIL_STATUS_LABELS.blocked}
-          </Text>
-        </View>
-      );
+      const label = estadoCuenta === EstadoCuenta.Cerrada
+        ? ACCOUNT_DETAIL_STATUS_LABELS.closed
+        : ACCOUNT_DETAIL_STATUS_LABELS.blocked;
+      return { label, bg: '#dc2626', text: '#ffffff' };
     } else {
-      return (
-        <View style={styles.statusContainer}>
-          <XCircle size={16} color="#737373" />
-          <Text style={styles.statusTextInactive}>
-            {estadoCuenta === EstadoCuenta.NoExiste
-              ? ACCOUNT_DETAIL_STATUS_LABELS.notExists
-              : ACCOUNT_DETAIL_STATUS_LABELS.inactive}
-          </Text>
-        </View>
-      );
+      const label = estadoCuenta === EstadoCuenta.NoExiste
+        ? ACCOUNT_DETAIL_STATUS_LABELS.notExists
+        : ACCOUNT_DETAIL_STATUS_LABELS.inactive;
+      return { label, bg: '#737373', text: '#ffffff' };
     }
   };
+
+  const statusInfo = getStatusInfo();
 
   return (
     <Card style={styles.card} colorScheme={colorScheme}>
@@ -88,8 +72,9 @@ export default function AccountDetailCard({ account }: AccountDetailCardProps) {
           <DetailField
             icon={Banknote}
             label={ACCOUNT_DETAIL_FIELD_LABELS.availableBalance}
+            column
             value={
-              <Text style={[styles.valueText, styles.valueBold, { color: '#a61612' }]}>
+              <Text style={[styles.valueText, styles.valueBold, { color: balanceColor }]}>
                 {formatAccountCurrency(account.saldo, account.moneda ?? undefined)}
               </Text>
             }
@@ -98,12 +83,19 @@ export default function AccountDetailCard({ account }: AccountDetailCardProps) {
           <DetailField
             icon={Lock}
             label={ACCOUNT_DETAIL_FIELD_LABELS.accountStatus}
-            value={renderStatus()}
+            value={
+              <View style={[styles.statusBadge, { backgroundColor: statusInfo.bg }]}>
+                <Text style={[styles.statusBadgeText, { color: statusInfo.text }]}>
+                  {statusInfo.label}
+                </Text>
+              </View>
+            }
           />
 
           <DetailField
             icon={CreditCard}
             label={ACCOUNT_DETAIL_FIELD_LABELS.accountIban}
+            column
             value={
               <Text style={[styles.valueText, styles.valueMono, { color: textColor }]}>
                 {formatIBAN(account.numeroCuentaIban || account.numeroCuenta || "")}
@@ -114,6 +106,7 @@ export default function AccountDetailCard({ account }: AccountDetailCardProps) {
           <DetailField
             icon={Building2}
             label={ACCOUNT_DETAIL_FIELD_LABELS.accountNumber}
+            column
             value={
               <Text style={[styles.valueText, styles.valueBold, { color: textColor }]}>
                 {account.numeroCuenta || "N/A"}
@@ -124,6 +117,7 @@ export default function AccountDetailCard({ account }: AccountDetailCardProps) {
           <DetailField
             icon={TrendingUp}
             label={ACCOUNT_DETAIL_FIELD_LABELS.accountType}
+            column
             value={
               <Text style={[styles.valueText, { color: textColor }]}>
                 {ACCOUNT_TYPE_LABELS[account.tipoCuenta]}
@@ -135,10 +129,14 @@ export default function AccountDetailCard({ account }: AccountDetailCardProps) {
             icon={Banknote}
             label={ACCOUNT_DETAIL_FIELD_LABELS.currency}
             value={
-              <Text style={[styles.valueText, { color: textColor }]}>
-                {account.moneda && CURRENCY_LABELS[account.moneda]}{" "}
-                <Text style={[styles.valueBold, { color: '#a61612' }]}>({account.moneda || "N/A"})</Text>
-              </Text>
+              <View style={styles.currencyValueRow}>
+                <Text style={[styles.valueText, { color: textColor }]}>
+                  {account.moneda && CURRENCY_LABELS[account.moneda]}
+                </Text>
+                <View style={styles.currencyBadge}>
+                  <Text style={styles.currencyBadgeText}>{account.moneda || "N/A"}</Text>
+                </View>
+              </View>
             }
           />
 
@@ -146,6 +144,7 @@ export default function AccountDetailCard({ account }: AccountDetailCardProps) {
             <DetailField
               icon={CreditCard}
               label={ACCOUNT_DETAIL_FIELD_LABELS.alias}
+              column
               value={
                 <Text style={[styles.valueText, styles.valueBold, { color: textColor }]}>
                   {account.alias}
@@ -189,24 +188,29 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace',
     fontSize: 13,
   },
-  statusContainer: {
+  statusBadge: {
+    borderRadius: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  statusBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  currencyValueRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  statusTextActive: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#15803d',
+  currencyBadge: {
+    backgroundColor: '#a61612',
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
-  statusTextBlocked: {
-    fontSize: 14,
+  currencyBadgeText: {
+    fontSize: 11,
+    color: '#ffffff',
     fontWeight: '600',
-    color: '#dc2626',
-  },
-  statusTextInactive: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#737373',
   },
 });

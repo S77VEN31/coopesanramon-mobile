@@ -10,6 +10,7 @@ interface WizardStep {
   title: string;
   component: ReactNode;
   canGoNext?: () => boolean;
+  onEnter?: () => void;
   onLeave?: () => void;
   hideNavigation?: () => boolean;
   fallbackButton?: {

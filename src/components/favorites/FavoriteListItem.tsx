@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, useColorScheme, Modal, TouchableWithoutFeedback } from 'react-native';
 import { MoreVertical, Pencil, Trash2 } from 'lucide-react-native';
 import { getTextColor, getSecondaryTextColor, getBorderColor, getCardBgColor } from '../../../App';
+import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import type { FavoriteType } from '@/constants/favorite-accounts.constants';
 import type { CuentaFavoritaInternaItem, CuentaSinpeFavoritaItem, MonederoFavoritoItem } from '@/services/api/favorites.api';
 
@@ -76,32 +77,36 @@ export default function FavoriteListItem({ item, type, onEdit, onDelete }: Favor
   };
 
   return (
-    <View style={[styles.container, { borderColor, backgroundColor: cardBg }]}>
-      <View style={styles.info}>
-        <Text style={[styles.titular, { color: textColor }]} numberOfLines={1}>
-          {info.titular}
+    <Card style={styles.container} colorScheme={colorScheme}>
+      <CardHeader style={styles.header}>
+        <Text style={styles.headerTitle} numberOfLines={1}>
+          {info.alias || info.account}
         </Text>
-        <Text style={[styles.account, { color: secondaryTextColor }]} numberOfLines={1}>
-          {info.account}
-        </Text>
-        <View style={styles.badges}>
-          {info.alias && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{info.alias}</Text>
-            </View>
-          )}
-          {info.currency && (
-            <View style={[styles.badge, styles.currencyBadge]}>
-              <Text style={[styles.badgeText, styles.currencyBadgeText]}>{info.currency}</Text>
-            </View>
-          )}
+      </CardHeader>
+      <CardContent style={styles.body}>
+        <View style={styles.bodyRow}>
+          <View style={styles.bodyContent}>
+            <Text style={[styles.titular, { color: secondaryTextColor }]} numberOfLines={1}>
+              {info.titular.toUpperCase()}
+            </Text>
+            <Text style={[styles.account, { color: '#ffffff' }]} numberOfLines={1}>
+              {info.account}
+            </Text>
+            {info.currency && (
+              <View style={styles.badges}>
+                <View style={[styles.badge, styles.currencyBadge]}>
+                  <Text style={styles.currencyBadgeText}>{info.currency}</Text>
+                </View>
+              </View>
+            )}
+          </View>
+          <View ref={buttonRef} collapsable={false}>
+            <TouchableOpacity onPress={handleOpenMenu} style={styles.moreButton} activeOpacity={0.7}>
+              <MoreVertical size={18} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-      <View ref={buttonRef} collapsable={false}>
-        <TouchableOpacity onPress={handleOpenMenu} style={styles.moreButton} activeOpacity={0.7}>
-          <MoreVertical size={20} color="#ffffff" />
-        </TouchableOpacity>
-      </View>
+      </CardContent>
 
       <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
         <TouchableWithoutFeedback onPress={() => setMenuVisible(false)}>
@@ -113,39 +118,54 @@ export default function FavoriteListItem({ item, type, onEdit, onDelete }: Favor
               </TouchableOpacity>
               <View style={[styles.menuDivider, { backgroundColor: borderColor }]} />
               <TouchableOpacity onPress={handleDelete} style={styles.menuItem} activeOpacity={0.7}>
-                <Trash2 size={16} color="#dc2626" />
-                <Text style={[styles.menuItemText, { color: '#dc2626' }]}>Eliminar</Text>
+                <Trash2 size={16} color="#a61612" />
+                <Text style={[styles.menuItemText, { color: '#a61612' }]}>Eliminar</Text>
               </TouchableOpacity>
             </View>
           </View>
         </TouchableWithoutFeedback>
       </Modal>
-    </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    marginBottom: 10,
+  },
+  header: {
+    backgroundColor: '#a61612',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    alignItems: 'flex-start',
+  },
+  headerTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  body: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  bodyRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
+    gap: 10,
   },
-  info: {
+  bodyContent: {
     flex: 1,
-    marginRight: 8,
   },
   titular: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 2,
+    fontSize: 12,
   },
   account: {
     fontSize: 12,
     fontFamily: 'monospace',
-    marginBottom: 4,
+    marginTop: 2,
+    marginBottom: 6,
   },
   badges: {
     flexDirection: 'row',
@@ -153,25 +173,23 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   badge: {
-    backgroundColor: 'rgba(166, 22, 18, 0.08)',
     borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  badgeText: {
-    fontSize: 11,
-    color: '#a61612',
-    fontWeight: '500',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
   },
   currencyBadge: {
-    backgroundColor: 'rgba(37, 99, 235, 0.08)',
+    backgroundColor: '#a61612',
+    borderColor: '#a61612',
   },
   currencyBadgeText: {
-    color: '#2563eb',
+    fontSize: 11,
+    color: '#ffffff',
+    fontWeight: '600',
   },
   moreButton: {
-    padding: 8,
-    borderRadius: 20,
+    padding: 6,
+    borderRadius: 16,
     backgroundColor: '#a61612',
   },
   menuBackdrop: {

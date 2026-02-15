@@ -8,6 +8,7 @@ import { useFavoriteWalletsStore } from '@/lib/states/favoriteWallets.store';
 import { useSecondFactorStore, requiresOtp, requiresEmail } from '@/lib/states/secondFactor.store';
 import { TipoOperacion } from '@/constants/enums';
 import { FAVORITE_TEXTS } from '@/constants/favorite-accounts.constants';
+import { isEmailValid } from '@/lib/utils/email.utils';
 import { getCardBackgroundColor, getTextColor, getSecondaryTextColor, getBorderColor, getCardBgColor } from '../../../App';
 
 export default function CreateWalletFavoriteModal() {
@@ -225,7 +226,11 @@ export default function CreateWalletFavoriteModal() {
           />
         </View>
       ),
-      canGoNext: () => true,
+      canGoNext: () => {
+        if (alias.trim().length < 4) return false;
+        if (email && !isEmailValid(email)) return false;
+        return true;
+      },
       onLeave: () => {
         setAlias('');
         setEmail('');

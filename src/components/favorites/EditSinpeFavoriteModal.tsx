@@ -3,11 +3,13 @@ import { Modal, View, Text, TouchableWithoutFeedback, StyleSheet, useColorScheme
 import { X } from 'lucide-react-native';
 import TransferWizard from '@/components/wizard/TransferWizard';
 import MessageCard from '@/components/cards/MessageCard';
+import SinpeInfoCard from '@/components/cards/SinpeInfoCard';
 import { TwoFactorStep, FavoriteDataStep } from '@/components/wizard/steps';
 import { useFavoriteSinpeAccountsStore } from '@/lib/states/favoriteSinpeAccounts.store';
 import { useSecondFactorStore, requiresOtp, requiresEmail } from '@/lib/states/secondFactor.store';
 import { TipoOperacion } from '@/constants/enums';
 import { FAVORITE_TEXTS } from '@/constants/favorite-accounts.constants';
+import { isEmailValid } from '@/lib/utils/email.utils';
 import { getCardBackgroundColor, getTextColor, getSecondaryTextColor, getBorderColor, getCardBgColor } from '../../../App';
 
 export default function EditSinpeFavoriteModal() {
@@ -152,12 +154,10 @@ export default function EditSinpeFavoriteModal() {
       title: FAVORITE_TEXTS.STEP_DATA,
       component: (
         <View style={styles.stepContent}>
-          <View style={[styles.accountCard, { borderColor, backgroundColor: getCardBgColor(colorScheme) }]}>
-            <Text style={[styles.accountLabel, { color: secondaryTextColor }]}>Titular</Text>
-            <Text style={[styles.accountValue, { color: textColor }]}>{selectedAccount?.titularDestino || '-'}</Text>
-            <Text style={[styles.accountLabel, { color: secondaryTextColor }]}>IBAN</Text>
-            <Text style={[styles.accountValue, { color: textColor }]}>{selectedAccount?.numeroCuentaDestino || '-'}</Text>
-          </View>
+          <SinpeInfoCard
+            titular={selectedAccount?.titularDestino || null}
+            iban={selectedAccount?.numeroCuentaDestino || null}
+          />
 
           <FavoriteDataStep
             alias={alias}
@@ -173,14 +173,24 @@ export default function EditSinpeFavoriteModal() {
             maxAmountLabel={FAVORITE_TEXTS.FIELD_MAX_AMOUNT}
             maxAmountPlaceholder="0.00"
             showPhone={true}
-            phone={telefono}
             onPhoneChange={setTelefono}
             phoneLabel={FAVORITE_TEXTS.FIELD_PHONE}
-            phonePlaceholder="88887777"
+            initialPhone={telefono}
           />
         </View>
       ),
-      canGoNext: () => true,
+      canGoNext: () => {
+        if (alias.trim().length < 4) return false;
+        if (email && !isEmailValid(email)) return false;
+        // Require at least one change
+        const hasChanges =
+          alias !== (selectedAccount?.alias || '') ||
+          email !== (selectedAccount?.email || '') ||
+          telefono !== (selectedAccount?.telefono || '') ||
+          montoMaximo !== (selectedAccount?.montoMaximo?.toString() || '');
+        if (!hasChanges) return false;
+        return true;
+      },
     },
     {
       id: 'verification',
@@ -323,19 +333,5 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     flexGrow: 1,
     justifyContent: 'center',
-  },
-  accountCard: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-  },
-  accountLabel: {
-    fontSize: 12,
-    marginBottom: 2,
-  },
-  accountValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 8,
   },
 });

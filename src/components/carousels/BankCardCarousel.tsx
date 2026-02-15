@@ -10,12 +10,9 @@ import {
   Text,
 } from 'react-native';
 import { useColorScheme } from 'react-native';
-import { 
-  CreditCard, 
-  Banknote, 
-  CheckCircle2, 
-  Lock, 
-  XCircle,
+import {
+  CreditCard,
+  Banknote,
   FileText,
 } from 'lucide-react-native';
 import BankCard from '../cards/BankCard';
@@ -98,45 +95,23 @@ export default function BankCardCarousel({
 
   const currentCard = tarjetas[currentIndex];
 
-  const renderStatus = () => {
+  const getStatusInfo = () => {
     const estado = currentCard.estado;
-    const isActive = 
+    const label = ESTADO_TARJETA_LABELS[estado];
+    const isActive =
       estado === EstadoTarjetaDebito.Activa ||
       estado === EstadoTarjetaDebito.ActivaSoloParaAcreditar ||
       estado === EstadoTarjetaDebito.ActivaSoloParaDebitar;
-    const isBlocked = 
+    const isBlocked =
       estado === EstadoTarjetaDebito.Bloqueada ||
       estado === EstadoTarjetaDebito.Cerrada;
 
-    if (isActive) {
-      return (
-        <View style={styles.statusContainer}>
-          <CheckCircle2 size={16} color="#16a34a" />
-          <Text style={styles.statusTextActive}>
-            {ESTADO_TARJETA_LABELS[estado]}
-          </Text>
-        </View>
-      );
-    } else if (isBlocked) {
-      return (
-        <View style={styles.statusContainer}>
-          <Lock size={16} color="#dc2626" />
-          <Text style={styles.statusTextBlocked}>
-            {ESTADO_TARJETA_LABELS[estado]}
-          </Text>
-        </View>
-      );
-    } else {
-      return (
-        <View style={styles.statusContainer}>
-          <XCircle size={16} color="#737373" />
-          <Text style={styles.statusTextInactive}>
-            {ESTADO_TARJETA_LABELS[estado]}
-          </Text>
-        </View>
-      );
-    }
+    if (isActive) return { label, bg: '#16a34a', text: '#ffffff' };
+    if (isBlocked) return { label, bg: '#dc2626', text: '#ffffff' };
+    return { label, bg: '#737373', text: '#ffffff' };
   };
+
+  const statusInfo = getStatusInfo();
 
   const getCurrencyLabel = (moneda: string | null | undefined) => {
     if (!moneda) return "Colones CR";
@@ -205,15 +180,21 @@ export default function BankCardCarousel({
         <Card style={styles.detailsCard} colorScheme={colorScheme}>
           <CardContent style={styles.detailsContent}>
             {/* Estado */}
-            <DetailField 
-              icon={CreditCard} 
+            <DetailField
+              icon={CreditCard}
               label="Estado de la Tarjeta"
-              value={renderStatus()}
+              value={
+                <View style={[styles.statusBadge, { backgroundColor: statusInfo.bg }]}>
+                  <Text style={[styles.badgeText, { color: statusInfo.text }]}>
+                    {statusInfo.label}
+                  </Text>
+                </View>
+              }
             />
 
             {/* Franquicia */}
-            <DetailField 
-              icon={CreditCard} 
+            <DetailField
+              icon={CreditCard}
               label="Franquicia"
               value={
                 <Text style={[styles.valueText, styles.valueBold, { color: textColor }]}>
@@ -223,16 +204,18 @@ export default function BankCardCarousel({
             />
 
             {/* Moneda */}
-            <DetailField 
-              icon={Banknote} 
+            <DetailField
+              icon={Banknote}
               label="Moneda"
               value={
-                <Text style={[styles.valueText, { color: textColor }]}>
-                  {getCurrencyLabel(currentCard.moneda)}{" "}
-                  <Text style={[styles.valueBold, { color: '#a61612' }]}>
-                    ({currentCard.moneda || "CRC"})
+                <View style={styles.currencyValueRow}>
+                  <Text style={[styles.valueText, { color: textColor }]}>
+                    {getCurrencyLabel(currentCard.moneda)}
                   </Text>
-                </Text>
+                  <View style={styles.currencyBadge}>
+                    <Text style={styles.badgeText}>{currentCard.moneda || "CRC"}</Text>
+                  </View>
+                </View>
               }
             />
 
@@ -298,24 +281,25 @@ const styles = StyleSheet.create({
   valueBold: {
     fontWeight: '600',
   },
-  statusContainer: {
+  statusBadge: {
+    borderRadius: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  currencyValueRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  statusTextActive: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#15803d',
-  },
-  statusTextBlocked: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#dc2626',
-  },
-  statusTextInactive: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#737373',
+  currencyBadge: {
+    backgroundColor: '#a61612',
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
 });

@@ -54,13 +54,14 @@ export const Button: React.FC<ButtonProps> = ({
       sm: styles.textSm,
       lg: styles.textLg,
     };
+    const outlineTextColor = colorScheme === 'dark' ? '#ffffff' : '#a61612';
     const variantStyle = {
       default: styles.textDefaultVariant,
-      outline: styles.textOutline,
+      outline: { color: outlineTextColor },
       ghost: styles.textGhost,
       destructive: styles.textDestructive,
     };
-    
+
     return [styles.textBase, sizeStyle[size], variantStyle[variant]];
   };
 
@@ -157,9 +158,7 @@ const styles = StyleSheet.create({
   textDefaultVariant: {
     color: '#ffffff',
   },
-  textOutline: {
-    color: '#ffffff',
-  },
+  textOutline: {},
   textGhost: {
     color: '#262626',
   },

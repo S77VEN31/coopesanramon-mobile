@@ -1,9 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, useColorScheme } from 'react-native';
+import { View, StyleSheet, useColorScheme } from 'react-native';
+import { Phone } from 'lucide-react-native';
 import { MaskedInput } from '@/components/ui/MaskedInput';
 import MessageCard from '@/components/cards/MessageCard';
+import WalletInfoCard from '@/components/cards/WalletInfoCard';
 import { PHONE_MASK } from '@/constants/input-masks';
-import { getTextColor, getSecondaryTextColor, getBorderColor, getCardBgColor } from '../../../../App';
+import { getBorderColor, getCardBgColor, getSecondaryTextColor } from '../../../../App';
 
 interface ValidatedWallet {
   monedero: string | null;
@@ -36,9 +38,8 @@ export default function WalletSearchStep({
   searchLabel = 'Número de Teléfono',
 }: WalletSearchStepProps) {
   const colorScheme = useColorScheme();
-  const textColor = getTextColor(colorScheme);
-  const secondaryTextColor = getSecondaryTextColor(colorScheme);
   const borderColor = getBorderColor(colorScheme);
+  const iconColor = getSecondaryTextColor(colorScheme);
 
   return (
     <View style={styles.container}>
@@ -52,6 +53,7 @@ export default function WalletSearchStep({
         mask={PHONE_MASK}
         maxLength={9}
         keyboardType="phone-pad"
+        leftIcon={<Phone size={16} color={iconColor} />}
         colorScheme={colorScheme}
         returnKeyType="search"
         onSubmitEditing={onSearch}
@@ -66,20 +68,11 @@ export default function WalletSearchStep({
       )}
 
       {validatedWallet && !isLoading && (
-        <View style={[styles.walletCard, { borderColor }]}>
-          <Text style={[styles.walletLabel, { color: secondaryTextColor }]}>Titular</Text>
-          <Text style={[styles.walletValue, { color: textColor }]}>
-            {validatedWallet.titular || '-'}
-          </Text>
-          <Text style={[styles.walletLabel, { color: secondaryTextColor }]}>Teléfono</Text>
-          <Text style={[styles.walletValue, { color: textColor }]}>
-            {validatedWallet.monedero || '-'}
-          </Text>
-          <Text style={[styles.walletLabel, { color: secondaryTextColor }]}>Entidad</Text>
-          <Text style={[styles.walletValue, { color: textColor }]}>
-            {validatedWallet.nombreBanco || '-'}
-          </Text>
-        </View>
+        <WalletInfoCard
+          titular={validatedWallet.titular}
+          monedero={validatedWallet.monedero}
+          nombreBanco={validatedWallet.nombreBanco}
+        />
       )}
     </View>
   );
@@ -94,19 +87,5 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     flex: 0,
     minHeight: 0,
-  },
-  walletCard: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-  },
-  walletLabel: {
-    fontSize: 12,
-    marginBottom: 2,
-  },
-  walletValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 8,
   },
 });

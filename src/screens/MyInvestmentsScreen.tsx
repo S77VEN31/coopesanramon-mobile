@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
 import { View, Text, RefreshControl, StyleSheet, TextInput, Keyboard, TouchableOpacity } from 'react-native';
 import { useColorScheme } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Search, X, ArrowDown, ArrowUp } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useInvestmentsStore } from '../lib/states/investments.store';
@@ -9,7 +9,6 @@ import { useAuthStore } from '../lib/states/auth.store';
 import InvestmentCard from '../components/cards/InvestmentCard';
 import MessageCard from '../components/cards/MessageCard';
 import ContentCard from '../components/cards/ContentCard';
-import InvestmentDetailsModal from '../components/modals/InvestmentDetailsModal';
 import { MY_INVESTMENTS_PAGE_TEXT } from '../constants/investments.constants';
 import { filterInvestments, sortInvestmentsByDate, getInvestmentIdentifier } from '../lib/utils/investments.utils';
 import { getBackgroundColor, getSecondaryTextColor, getBorderColor } from '../../App';
@@ -24,7 +23,6 @@ export default function MyInvestmentsScreen({ navigation }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [selectedInvestment, setSelectedInvestment] = useState<DtoInversion | null>(null);
   const colorScheme = useColorScheme();
   const { investments, isLoading, error, loadInvestments, setError } = useInvestmentsStore();
   const { isAuthenticated } = useAuthStore();
@@ -137,8 +135,8 @@ export default function MyInvestmentsScreen({ navigation }: Props) {
     }
   };
 
-  const handleViewCoupons = (numeroInversion: string) => {
-    navigation.navigate('Coupons', { numeroInversion });
+  const handleInvestmentPress = (investment: DtoInversion) => {
+    navigation.navigate('InvestmentDetail', { investment });
   };
 
   const renderEmpty = () => {
@@ -194,7 +192,7 @@ export default function MyInvestmentsScreen({ navigation }: Props) {
                 <InvestmentCard
                   key={getInvestmentIdentifier(investment) || `investment-${index}`}
                   investment={investment}
-                  onPress={() => setSelectedInvestment(investment)}
+                  onPress={() => handleInvestmentPress(investment)}
                 />
               ))}
             </View>
@@ -204,12 +202,6 @@ export default function MyInvestmentsScreen({ navigation }: Props) {
         </ContentCard>
       </View>
 
-      <InvestmentDetailsModal
-        visible={selectedInvestment !== null}
-        onClose={() => setSelectedInvestment(null)}
-        investment={selectedInvestment}
-        onViewCoupons={handleViewCoupons}
-      />
     </View>
   );
 }

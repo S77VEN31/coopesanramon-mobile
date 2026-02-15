@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlatList } from 'react-native';
+import { View } from 'react-native';
 import MessageCard from '@/components/cards/MessageCard';
 import FavoriteListItem from './FavoriteListItem';
 import { FAVORITE_TEXTS } from '@/constants/favorite-accounts.constants';
@@ -37,18 +37,16 @@ export default function FavoriteList({ items, type, isLoading, onEdit, onDelete,
   }
 
   return (
-    <FlatList
-      data={items}
-      keyExtractor={(item) => item.id.toString()}
-      renderItem={({ item }) => (
+    <View>
+      {items.map((item) => (
         <FavoriteListItem
+          key={item.id.toString()}
           item={item}
           type={type}
           onEdit={() => onEdit(item)}
           onDelete={() => onDelete(item)}
         />
-      )}
-      scrollEnabled={false}
-    />
+      ))}
+    </View>
   );
 }

@@ -20,6 +20,7 @@ export const OTPInput: React.FC<OTPInputProps> = ({
   autoFocus = false,
 }) => {
   const inputRefs = useRef<TextInput[]>([]);
+  const backspaceHandledRef = useRef(false);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const textColor = getTextColor(colorScheme);
   const borderColor = getBorderColor(colorScheme);
@@ -44,7 +45,7 @@ export const OTPInput: React.FC<OTPInputProps> = ({
   const handleChange = (text: string, index: number) => {
     // Only allow digits
     const digits = text.replace(/\D/g, '');
-    
+
     if (digits.length > 1) {
       // Handle paste
       const newValue = value.split('');
@@ -52,7 +53,7 @@ export const OTPInput: React.FC<OTPInputProps> = ({
         newValue[index + i] = digits[i];
       }
       onChange(newValue.join('').slice(0, length));
-      
+
       // Focus next empty input or last input
       const nextIndex = Math.min(index + digits.length, length - 1);
       inputRefs.current[nextIndex]?.focus();
@@ -61,27 +62,41 @@ export const OTPInput: React.FC<OTPInputProps> = ({
       const newValue = value.split('');
       newValue[index] = digits;
       onChange(newValue.join('').slice(0, length));
-      
+
       // Focus next input if not last
       if (index < length - 1) {
         inputRefs.current[index + 1]?.focus();
       }
     } else {
-      // Backspace/delete
+      // Backspace/delete - skip if already handled by onKeyPress
+      if (backspaceHandledRef.current) {
+        backspaceHandledRef.current = false;
+        return;
+      }
+      // Fallback for devices where onKeyPress doesn't fire
       const newValue = value.split('');
       newValue[index] = '';
       onChange(newValue.join(''));
-      
-      // Focus previous input if current is empty
-      if (index > 0 && !value[index]) {
+      if (index > 0) {
         inputRefs.current[index - 1]?.focus();
       }
     }
   };
 
   const handleKeyPress = (key: string, index: number) => {
-    if (key === 'Backspace' && !value[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
+    if (key === 'Backspace') {
+      backspaceHandledRef.current = true;
+      const newValue = value.split('');
+      if (value[index]) {
+        // Field has a value - clear it, stay on same field
+        newValue[index] = '';
+        onChange(newValue.join(''));
+      } else if (index > 0) {
+        // Field is empty - move to previous and clear it
+        newValue[index - 1] = '';
+        onChange(newValue.join(''));
+        inputRefs.current[index - 1]?.focus();
+      }
     }
   };
 

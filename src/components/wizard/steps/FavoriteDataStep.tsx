@@ -1,6 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, useColorScheme } from 'react-native';
+import { Tag, Mail, Phone, Banknote, X } from 'lucide-react-native';
 import { Input } from '@/components/ui/Input';
+import { MaskedInput } from '@/components/ui/MaskedInput';
+import { PHONE_MASK } from '@/constants/input-masks';
+import { getSecondaryTextColor } from '../../../../App';
 import { isEmailValid } from '@/lib/utils/email.utils';
 
 interface FavoriteDataStepProps {
@@ -17,11 +21,10 @@ interface FavoriteDataStepProps {
   maxAmountLabel?: string;
   maxAmountPlaceholder?: string;
   showMaxAmount?: boolean;
-  phone?: string;
   onPhoneChange?: (value: string) => void;
   phoneLabel?: string;
-  phonePlaceholder?: string;
   showPhone?: boolean;
+  initialPhone?: string;
 }
 
 export default function FavoriteDataStep({
@@ -38,13 +41,25 @@ export default function FavoriteDataStep({
   maxAmountLabel = 'Monto Máximo (Opcional)',
   maxAmountPlaceholder = '0.00',
   showMaxAmount = true,
-  phone = '',
   onPhoneChange,
   phoneLabel = 'Teléfono (Opcional)',
-  phonePlaceholder = '88887777',
   showPhone = false,
+  initialPhone = '',
 }: FavoriteDataStepProps) {
   const colorScheme = useColorScheme();
+  const iconColor = getSecondaryTextColor(colorScheme);
+  const [maskedPhone, setMaskedPhone] = useState('');
+
+  useEffect(() => {
+    if (initialPhone) {
+      const digits = initialPhone.replace(/\D/g, '');
+      if (digits.length === 8) {
+        setMaskedPhone(`${digits.slice(0, 4)}-${digits.slice(4)}`);
+      } else {
+        setMaskedPhone(initialPhone);
+      }
+    }
+  }, [initialPhone]);
 
   const handleMaxAmountChange = (value: string) => {
     if (value === '' || /^\d*\.?\d*$/.test(value)) {
@@ -52,9 +67,9 @@ export default function FavoriteDataStep({
     }
   };
 
-  const handlePhoneChange = (value: string) => {
-    const digitsOnly = value.replace(/\D/g, '').slice(0, 8);
-    onPhoneChange?.(digitsOnly);
+  const handlePhoneChange = (masked: string, unmasked: string) => {
+    setMaskedPhone(masked);
+    onPhoneChange?.(unmasked);
   };
 
   return (
@@ -64,6 +79,9 @@ export default function FavoriteDataStep({
         placeholder={aliasPlaceholder}
         value={alias}
         onChangeText={onAliasChange}
+        leftIcon={<Tag size={16} color={iconColor} />}
+        rightIcon={alias ? <X size={18} color={iconColor} /> : undefined}
+        onRightIconPress={() => onAliasChange('')}
         colorScheme={colorScheme}
       />
       <Input
@@ -73,16 +91,22 @@ export default function FavoriteDataStep({
         onChangeText={onEmailChange}
         keyboardType="email-address"
         autoCapitalize="none"
+        leftIcon={<Mail size={16} color={iconColor} />}
+        rightIcon={email ? <X size={18} color={iconColor} /> : undefined}
+        onRightIconPress={() => onEmailChange('')}
         error={email && !isEmailValid(email) ? 'Correo electrónico no válido' : undefined}
         colorScheme={colorScheme}
       />
       {showPhone && (
-        <Input
+        <MaskedInput
           label={phoneLabel}
-          placeholder={phonePlaceholder}
-          value={phone}
+          placeholder="8888-7777"
+          value={maskedPhone}
           onChangeText={handlePhoneChange}
+          mask={PHONE_MASK}
+          maxLength={9}
           keyboardType="phone-pad"
+          leftIcon={<Phone size={16} color={iconColor} />}
           colorScheme={colorScheme}
         />
       )}
@@ -93,6 +117,9 @@ export default function FavoriteDataStep({
           value={maxAmount}
           onChangeText={handleMaxAmountChange}
           keyboardType="numeric"
+          leftIcon={<Banknote size={16} color={iconColor} />}
+          rightIcon={maxAmount ? <X size={18} color={iconColor} /> : undefined}
+          onRightIconPress={() => onMaxAmountChange('')}
           colorScheme={colorScheme}
         />
       )}

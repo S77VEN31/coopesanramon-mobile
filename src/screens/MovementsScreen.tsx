@@ -152,11 +152,19 @@ export default function MovementsScreen({ navigation: routeNavigation, route }: 
       if (accountExists && selectedAccount !== route.params.numeroCuenta) {
         clearMovements();
         setSelectedAccount(route.params.numeroCuenta);
-        setDateFrom(undefined);
-        setDateTo(undefined);
         setSelectedType(ALL_TYPES_VALUE);
         setSearchTerm("");
         setSortOrder("desc");
+
+        // Set dates to today and auto-search
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        setDateFrom(today);
+        setDateTo(today);
+
+        const fechaInicial = formatDateForApiStart(new Date(today));
+        const fechaFinal = formatDateForApiEnd(new Date(today));
+        loadMovements(route.params.numeroCuenta, fechaInicial, fechaFinal);
       }
     }
   }, [route.params?.numeroCuenta, accounts.length]);
