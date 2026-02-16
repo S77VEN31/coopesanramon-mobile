@@ -10,13 +10,20 @@ export const ESTADO_CUPON_STYLE: Record<EstadoCupon, 'success' | 'default'> = {
   [EstadoCupon.Pagado]: 'default',
 };
 
+export const SORT_ORDER_OPTIONS = [
+  { value: 'desc', label: 'Recientes' },
+  { value: 'asc', label: 'Antiguos' },
+];
+
 export const COUPONS_PAGE_TEXT = {
   title: 'Cupones',
   description: 'Consulta el historial de cupones de tus inversiones',
   searchPlaceholder: 'Buscar cupón...',
-  investmentLabel: 'Inversión',
-  investmentPlaceholder: 'Seleccionar inversión',
-  investmentAll: 'Todas las inversiones',
+  investmentLabel: 'Cupón',
+  investmentPlaceholder: 'Seleccionar cupón',
+  sortLabel: 'Ordenar por',
+  searchButton: 'Buscar',
+  filtersTitle: 'Filtros',
   emptyMessage: 'No se encontraron cupones.',
   emptyMessageSearch: 'No se encontraron cupones que coincidan con tu búsqueda.',
 } as const;

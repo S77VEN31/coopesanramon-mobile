@@ -21,9 +21,18 @@ export const INVESTMENTS_PAGE_TEXT = {
   categoryCouponsDescription: 'Revisa los cupones de tus inversiones',
 } as const;
 
+export const INVESTMENTS_SORT_ORDER_OPTIONS = [
+  { value: 'desc', label: 'Recientes' },
+  { value: 'asc', label: 'Antiguos' },
+];
+
 export const MY_INVESTMENTS_PAGE_TEXT = {
   title: 'Mis Inversiones',
+  description: 'Consulta tus certificados de inversión activos',
   searchPlaceholder: 'Buscar inversión...',
+  sortLabel: 'Ordenar por',
+  searchButton: 'Buscar',
+  filtersTitle: 'Filtros',
   emptyMessage: 'No se encontraron inversiones.',
   emptyMessageSearch: 'No se encontraron inversiones que coincidan con tu búsqueda.',
 } as const;

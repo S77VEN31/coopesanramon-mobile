@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect, useLayoutEffect } from 're
 import { View, Text, StyleSheet, RefreshControl, TextInput, Keyboard, TouchableOpacity, Pressable, Modal, ScrollView } from 'react-native';
 import { useColorScheme } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Search, X, ArrowDown, ArrowUp, ChevronDown, Check } from 'lucide-react-native';
+import { Search, X, Filter } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useInvestmentsStore } from '../lib/states/investments.store';
 import { useCouponsStore } from '../lib/states/coupons.store';
@@ -10,13 +10,13 @@ import { useAuthStore } from '../lib/states/auth.store';
 import CouponCard from '../components/cards/CouponCard';
 import MessageCard from '../components/cards/MessageCard';
 import ContentCard from '../components/cards/ContentCard';
-import { COUPONS_PAGE_TEXT, COUPONS_METRICS } from '../constants/coupons.constants';
-import { TIPO_INVERSION_LABELS } from '../constants/investments.constants';
+import { SelectInput } from '../components/inputs/SelectInput';
+import { InvestmentSelect } from '../components/inputs/InvestmentSelect';
+import { Button } from '../components/ui/Button';
+import { COUPONS_PAGE_TEXT, SORT_ORDER_OPTIONS } from '../constants/coupons.constants';
 import { filterCoupons, sortCouponsByDate, getCouponIdentifier } from '../lib/utils/coupons.utils';
-import { formatCurrency } from '../lib/utils/format.utils';
-import { getBackgroundColor, getTextColor, getSecondaryTextColor, getBorderColor, getCardBackgroundColor } from '../../App';
+import { getBackgroundColor, getTextColor, getBorderColor, getCardBackgroundColor } from '../../App';
 import type { MainStackParamList } from '../navigation/types';
-import type { DtoInversion } from '../services/api/investments.api';
 import CustomHeader from '../components/header/CustomHeader';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'Coupons'>;
@@ -28,12 +28,13 @@ export default function CouponsScreen({ navigation, route }: Props) {
   const [showSearch, setShowSearch] = useState(false);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [refreshing, setRefreshing] = useState(false);
-  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [filtersModalVisible, setFiltersModalVisible] = useState(false);
+  const [tempInversion, setTempInversion] = useState(initialInversion);
+  const [tempSortOrder, setTempSortOrder] = useState<'asc' | 'desc'>('desc');
   const colorScheme = useColorScheme();
   const backgroundColor = getBackgroundColor(colorScheme);
   const cardBg = getCardBackgroundColor(colorScheme);
   const textColor = getTextColor(colorScheme);
-  const secondaryTextColor = getSecondaryTextColor(colorScheme);
   const borderColor = getBorderColor(colorScheme);
   const searchInputRef = useRef<TextInput>(null);
 
@@ -148,9 +149,6 @@ export default function CouponsScreen({ navigation, route }: Props) {
     return filterCoupons(sorted, searchTerm);
   }, [coupons, sortOrder, searchTerm]);
 
-  const totalCupones = coupons.length;
-  const montoTotal = coupons.reduce((sum, c) => sum + c.montoNeto, 0);
-  const interesTotal = coupons.reduce((sum, c) => sum + c.interesNeto, 0);
 
   const handleRefresh = async () => {
     if (!selectedInversion) return;
@@ -162,9 +160,25 @@ export default function CouponsScreen({ navigation, route }: Props) {
     }
   };
 
-  const handleSelectInversion = (value: string) => {
-    setSelectedInversion(value);
-    setIsPickerOpen(false);
+  const openFiltersModal = () => {
+    setTempInversion(selectedInversion);
+    setTempSortOrder(sortOrder);
+    setFiltersModalVisible(true);
+  };
+
+  const handleSearch = () => {
+    setSelectedInversion(tempInversion);
+    setSortOrder(tempSortOrder);
+    setFiltersModalVisible(false);
+  };
+
+  const handleClearFilters = () => {
+    setSelectedInversion('');
+    setTempInversion('');
+    setSearchTerm('');
+    setSortOrder('desc');
+    setTempSortOrder('desc');
+    clearCoupons();
   };
 
   const renderContent = () => {
@@ -197,8 +211,10 @@ export default function CouponsScreen({ navigation, route }: Props) {
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
+      {/* Metrics Carousel */}
       <View style={styles.content}>
         <ContentCard
+          description={COUPONS_PAGE_TEXT.description}
           fullHeight={true}
           refreshControl={
             <RefreshControl
@@ -209,141 +225,108 @@ export default function CouponsScreen({ navigation, route }: Props) {
             />
           }
         >
-          <View style={styles.filterRow}>
-            <View style={styles.filterSelectWrapper}>
-              <Pressable
-                onPress={() => {
-                  if (!isLoadingInvestments && investments.length > 0) setIsPickerOpen(true);
-                }}
-                disabled={isLoadingInvestments || investments.length === 0}
-                style={({ pressed }) => [
-                  styles.trigger,
-                  { borderColor, backgroundColor: cardBg },
-                  pressed && styles.triggerPressed,
-                  (isLoadingInvestments || investments.length === 0) && styles.triggerDisabled,
-                ]}
-              >
-                <View style={styles.triggerContent}>
-                  {selectedInversion && selectedInvestmentData ? (
-                    <View style={styles.selectedRow}>
-                      <Text style={[styles.selectedType, { color: textColor }]}>
-                        {TIPO_INVERSION_LABELS[selectedInvestmentData.tipoInversion] || 'No Definido'}
-                      </Text>
-                      <Text style={[styles.selectedOp, { color: secondaryTextColor }]}>
-                        No. {selectedInvestmentData.numeroInversion}
-                      </Text>
-                    </View>
-                  ) : (
-                    <Text style={[styles.placeholder, { color: secondaryTextColor }]}>
-                      {COUPONS_PAGE_TEXT.investmentAll}
-                    </Text>
-                  )}
-                </View>
-                <ChevronDown size={18} color={(isLoadingInvestments || investments.length === 0) ? '#9ca3af' : secondaryTextColor} />
-              </Pressable>
-            </View>
-            <TouchableOpacity
-              onPress={() => setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
-              style={[styles.sortButton, { borderColor }]}
-              activeOpacity={0.7}
-            >
-              {sortOrder === 'desc' ? (
-                <ArrowDown size={18} color={secondaryTextColor} />
-              ) : (
-                <ArrowUp size={18} color={secondaryTextColor} />
-              )}
-              <Text style={[styles.sortLabel, { color: secondaryTextColor }]}>
-                {sortOrder === 'desc' ? 'Reciente' : 'Antiguo'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {!isLoading && coupons.length > 0 && (
-            <View style={styles.metricsContainer}>
-              <View style={styles.metricsTopRow}>
-                <View style={[styles.metricTile, { borderColor }]}>
-                  <Text style={[styles.metricTileLabel, { color: secondaryTextColor }]}>{COUPONS_METRICS.totalCupones}</Text>
-                  <Text style={[styles.metricTileValue, { color: textColor }]}>{totalCupones}</Text>
-                </View>
-                <View style={[styles.metricTile, styles.metricTileSuccess]}>
-                  <Text style={[styles.metricTileLabel, { color: secondaryTextColor }]}>{COUPONS_METRICS.montoTotal}</Text>
-                  <Text style={[styles.metricTileValue, styles.metricTileValueSuccess]}>{formatCurrency(montoTotal, moneda)}</Text>
-                </View>
-              </View>
-              <View style={[styles.metricTileWide, { borderColor }]}>
-                <Text style={[styles.metricTileLabel, { color: secondaryTextColor }]}>{COUPONS_METRICS.interesTotal}</Text>
-                <Text style={[styles.metricTileValue, { color: textColor }]}>{formatCurrency(interesTotal, moneda)}</Text>
-              </View>
-            </View>
-          )}
-
           {renderContent()}
         </ContentCard>
       </View>
 
-      <Modal visible={isPickerOpen} transparent animationType="fade" onRequestClose={() => setIsPickerOpen(false)}>
-        <View style={styles.overlay}>
-          <View style={[styles.modalContainer, { backgroundColor: cardBg }]}>
-            <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
-              <Text style={[styles.modalTitle, { color: textColor }]}>{COUPONS_PAGE_TEXT.investmentLabel}</Text>
-              <Pressable onPress={() => setIsPickerOpen(false)}>
-                <Text style={styles.modalClose}>Cerrar</Text>
-              </Pressable>
-            </View>
-            <ScrollView style={styles.modalList} showsVerticalScrollIndicator={false}>
-              <Pressable
-                onPress={() => handleSelectInversion('')}
-                style={[
-                  styles.investmentItem,
-                  { borderBottomColor: borderColor },
-                  !selectedInversion && styles.investmentItemSelected,
-                ]}
+      {/* Floating Buttons */}
+      <View style={styles.floatingButtonsContainer}>
+        {/* Clear Filters Button */}
+        {(selectedInversion || searchTerm || coupons.length > 0) && (
+          <TouchableOpacity
+            style={styles.floatingClearButton}
+            onPress={handleClearFilters}
+            activeOpacity={0.8}
+          >
+            <X size={24} color="#ffffff" />
+          </TouchableOpacity>
+        )}
+        {/* Filter Button */}
+        <TouchableOpacity
+          style={styles.floatingFilterButton}
+          onPress={openFiltersModal}
+          activeOpacity={0.8}
+        >
+          <Filter size={24} color="#ffffff" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Filters Modal */}
+      <Modal
+        visible={filtersModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setFiltersModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setFiltersModalVisible(false)}
+        >
+          <Pressable
+            style={[styles.modalContent, { backgroundColor: cardBg }]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={[styles.filtersModalHeader, { borderBottomColor: borderColor }]}>
+              <Text style={[styles.filtersModalTitle, { color: '#a61612' }]}>
+                {COUPONS_PAGE_TEXT.filtersTitle}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setFiltersModalVisible(false)}
+                style={styles.modalCloseButton}
               >
-                <View style={styles.investmentItemContent}>
-                  <Text style={[styles.investmentItemType, { color: !selectedInversion ? '#fff' : textColor }]}>
-                    {COUPONS_PAGE_TEXT.investmentAll}
-                  </Text>
-                </View>
-                {!selectedInversion && <Check size={18} color="#fff" />}
-              </Pressable>
-              {investments.map((inv) => {
-                if (!inv.numeroInversion) return null;
-                const isSelected = inv.numeroInversion === selectedInversion;
-                return (
-                  <Pressable
-                    key={inv.numeroInversion}
-                    onPress={() => handleSelectInversion(inv.numeroInversion!)}
-                    style={[
-                      styles.investmentItem,
-                      { borderBottomColor: borderColor },
-                      isSelected && styles.investmentItemSelected,
-                    ]}
-                  >
-                    <View style={styles.investmentItemContent}>
-                      <View style={styles.investmentItemTop}>
-                        <Text style={[styles.investmentItemType, { color: isSelected ? '#fff' : textColor }]}>
-                          {TIPO_INVERSION_LABELS[inv.tipoInversion] || 'No Definido'}
-                        </Text>
-                        <Text style={[styles.investmentItemOp, { color: isSelected ? 'rgba(255,255,255,0.8)' : secondaryTextColor }]}>
-                          {inv.numeroInversion}
-                        </Text>
-                      </View>
-                      <View style={styles.investmentItemBottom}>
-                        <Text style={[styles.investmentItemMoneda, { color: isSelected ? 'rgba(255,255,255,0.7)' : secondaryTextColor }]}>
-                          {inv.moneda || 'CRC'}
-                        </Text>
-                        <Text style={[styles.investmentItemMonto, { color: isSelected ? '#fff' : textColor }]}>
-                          {formatCurrency(inv.monto, inv.moneda || 'CRC')}
-                        </Text>
-                      </View>
-                    </View>
-                    {isSelected && <Check size={18} color="#fff" />}
-                  </Pressable>
-                );
-              })}
+                <X size={24} color={textColor} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={styles.modalScrollView}
+              contentContainerStyle={styles.modalScrollContent}
+              showsVerticalScrollIndicator={true}
+              nestedScrollEnabled={true}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.filtersContainer}>
+                {/* Investment Select */}
+                <InvestmentSelect
+                  investments={investments}
+                  value={tempInversion}
+                  onValueChange={setTempInversion}
+                  placeholder={COUPONS_PAGE_TEXT.investmentPlaceholder}
+                  disabled={isLoadingInvestments || investments.length === 0}
+                  label={COUPONS_PAGE_TEXT.investmentLabel}
+                />
+
+                {/* Sort Order */}
+                <SelectInput
+                  options={SORT_ORDER_OPTIONS}
+                  value={tempSortOrder}
+                  onValueChange={(val) => setTempSortOrder(val as 'asc' | 'desc')}
+                  label={COUPONS_PAGE_TEXT.sortLabel}
+                />
+              </View>
             </ScrollView>
-          </View>
-        </View>
+
+            {/* Modal Footer */}
+            <View style={[styles.modalFooter, { borderTopColor: borderColor }]}>
+              <Button
+                variant="outline"
+                size="sm"
+                onPress={() => setFiltersModalVisible(false)}
+                style={styles.cancelButton}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onPress={handleSearch}
+                style={styles.searchButton}
+              >
+                {COUPONS_PAGE_TEXT.searchButton}
+              </Button>
+            </View>
+          </Pressable>
+        </Pressable>
       </Modal>
     </View>
   );
@@ -359,175 +342,102 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 16,
   },
-  filterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  filterSelectWrapper: {
-    flex: 1,
-  },
-  trigger: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    gap: 10,
-  },
-  triggerPressed: {
-    opacity: 0.8,
-  },
-  triggerDisabled: {
-    opacity: 0.5,
-  },
-  triggerContent: {
-    flex: 1,
-    minWidth: 0,
-  },
-  selectedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  couponsList: {
     gap: 8,
   },
-  selectedType: {
-    fontSize: 14,
-    fontWeight: '600',
+  // Floating buttons
+  floatingButtonsContainer: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    flexDirection: 'column',
+    gap: 12,
+    alignItems: 'flex-end',
   },
-  selectedOp: {
-    fontSize: 13,
-  },
-  placeholder: {
-    fontSize: 14,
-  },
-  sortButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 12,
-    flexShrink: 0,
-  },
-  sortLabel: {
-    fontSize: 13,
-  },
-  metricsContainer: {
-    marginTop: 16,
-    marginBottom: 16,
-    gap: 10,
-  },
-  metricsTopRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  metricTile: {
-    flex: 1,
-    borderRadius: 10,
-    borderWidth: 1,
-    padding: 12,
-  },
-  metricTileSuccess: {
-    backgroundColor: 'rgba(22, 163, 74, 0.08)',
-    borderColor: 'rgba(22, 163, 74, 0.2)',
-  },
-  metricTileWide: {
-    borderRadius: 10,
-    borderWidth: 1,
-    padding: 12,
-  },
-  metricTileLabel: {
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  metricTileValue: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  metricTileValueSuccess: {
-    color: '#15803d',
-  },
-  couponsList: {
-    gap: 4,
-    marginTop: 4,
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  floatingFilterButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#a61612',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  modalContainer: {
-    borderRadius: 16,
+  floatingClearButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#dc2626',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  // Filters modal (bottom-sheet style)
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '50%',
+    height: '50%',
     width: '100%',
-    maxWidth: 420,
-    maxHeight: '60%',
-    overflow: 'hidden',
+    flexDirection: 'column',
+    flex: 0,
   },
-  modalHeader: {
+  filtersModalHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  modalClose: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#a61612',
-  },
-  modalList: {
-    maxHeight: 320,
-  },
-  investmentItem: {
-    flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    flexShrink: 0,
+  },
+  filtersModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  modalScrollView: {
+    flex: 1,
+    flexShrink: 1,
+  },
+  modalScrollContent: {
+    padding: 20,
+    gap: 16,
+    flexGrow: 1,
+  },
+  filtersContainer: {
     gap: 12,
   },
-  investmentItemSelected: {
-    backgroundColor: '#a61612',
+  modalFooter: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    flexShrink: 0,
   },
-  investmentItemContent: {
+  cancelButton: {
     flex: 1,
-    minWidth: 0,
   },
-  investmentItemTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
+  searchButton: {
+    flex: 1,
   },
-  investmentItemType: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  investmentItemOp: {
-    fontSize: 13,
-  },
-  investmentItemBottom: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  investmentItemMoneda: {
-    fontSize: 12,
-  },
-  investmentItemMonto: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
+  // Header search
   headerSearchWrapper: {
     flex: 1,
     flexDirection: 'row',

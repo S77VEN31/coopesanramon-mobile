@@ -40,7 +40,7 @@ import {
 } from '../lib/utils/movements.utils';
 import { formatCurrency, formatDateForApiStart, formatDateForApiEnd } from '../lib/utils/format.utils';
 import { getAccountIdentifier } from '../lib/utils/accounts.utils';
-import { getBackgroundColor, getTextColor, getCardBackgroundColor } from '../../App';
+import { getBackgroundColor, getTextColor, getBorderColor, getCardBackgroundColor } from '../../App';
 import { MovementType, TipoMovimiento } from '../constants/enums'; // Keeping this if it was needed, but looking at code it seems not used directly or maybe I should remove the import from api entirely if TipoMovimiento was the only one.
 import type { MainDrawerParamList } from '../navigation/types';
 
@@ -532,7 +532,7 @@ export default function MovementsScreen({ navigation: routeNavigation, route }: 
             style={[styles.modalContent, { backgroundColor: getCardBackgroundColor(colorScheme) }]}
             onPress={(e) => e.stopPropagation()}
           >
-            <View style={styles.modalHeader}>
+            <View style={[styles.modalHeader, { borderBottomColor: getBorderColor(colorScheme) }]}>
               <Text style={[styles.modalTitle, { color: '#a61612' }]}>
                 Filtros
               </Text>
@@ -607,7 +607,7 @@ export default function MovementsScreen({ navigation: routeNavigation, route }: 
             </ScrollView>
 
             {/* Modal Footer with Action Buttons */}
-            <View style={styles.modalFooter}>
+            <View style={[styles.modalFooter, { borderTopColor: getBorderColor(colorScheme) }]}>
               <Button
                 variant="outline"
                 size="sm"
@@ -818,7 +818,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
     flexShrink: 0,
   },
   modalTitle: {
@@ -843,7 +842,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.1)',
     flexShrink: 0,
   },
 });

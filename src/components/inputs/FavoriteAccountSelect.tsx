@@ -1,30 +1,49 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, FlatList, StyleSheet } from 'react-native';
-import { CreditCard, ChevronDown, X } from 'lucide-react-native';
+import { ChevronDown, X } from 'lucide-react-native';
 import { useColorScheme } from 'react-native';
 import { getTextColor, getSecondaryTextColor, getBorderColor, getInputBackgroundColor, getCardBackgroundColor } from '../../../App';
 import { formatIBAN } from '../../lib/utils/format.utils';
-import { formatAccountCurrency } from '../../lib/utils/accounts.utils';
-import { EstadoCuenta } from '../../constants/enums';
-import { type DtoCuenta } from '../../services/api/accounts.api';
 
-interface AccountSelectProps {
-  accounts: DtoCuenta[];
-  value?: string;
-  onValueChange: (value: string) => void;
+interface FavoriteAccountSelectProps<T> {
+  items: T[];
+  value: T | null | undefined;
+  onSelect: (item: T) => void;
   placeholder?: string;
   disabled?: boolean;
   label?: string;
+  modalTitle?: string;
+  emptyMessage?: string;
+  /** Return a unique key for each item */
+  getKey: (item: T) => string;
+  /** Return the display text for the trigger and item title (e.g. IBAN or phone) */
+  getDisplayText: (item: T) => string;
+  /** Return the alias if available */
+  getAlias?: (item: T) => string | null | undefined;
+  /** Return the titular/owner name if available */
+  getTitular?: (item: T) => string | null | undefined;
+  /** Whether to format display text as IBAN */
+  formatAsIban?: boolean;
+  /** Icon element to show on the right side of each modal item */
+  icon?: React.ReactElement;
 }
 
-export function AccountSelect({
-  accounts,
+export function FavoriteAccountSelect<T>({
+  items,
   value,
-  onValueChange,
-  placeholder = "Seleccionar cuenta",
+  onSelect,
+  placeholder = 'Seleccionar cuenta favorita',
   disabled = false,
   label,
-}: AccountSelectProps) {
+  modalTitle = 'Seleccionar Cuenta Favorita',
+  emptyMessage = 'No hay cuentas favoritas disponibles',
+  getKey,
+  getDisplayText,
+  getAlias,
+  getTitular,
+  formatAsIban = false,
+  icon,
+}: FavoriteAccountSelectProps<T>) {
   const [modalVisible, setModalVisible] = useState(false);
   const colorScheme = useColorScheme();
   const textColor = getTextColor(colorScheme);
@@ -33,24 +52,22 @@ export function AccountSelect({
   const inputBackgroundColor = getInputBackgroundColor(colorScheme);
   const cardBackgroundColor = getCardBackgroundColor(colorScheme);
 
-  // Filter only active accounts
-  const activeAccounts = accounts.filter(
-    (acc) => acc.estadoCuenta === EstadoCuenta.Activa
-  );
+  const selectedKey = value ? getKey(value) : null;
 
-  const selectedAccount = activeAccounts.find(
-    (acc) => (acc.numeroCuentaIban || acc.numeroCuenta) === value
-  );
-
-  const getAccountIdentifier = (account: DtoCuenta): string => {
-    return account.numeroCuentaIban || account.numeroCuenta || "";
+  const getFormattedText = (item: T): string => {
+    const raw = getDisplayText(item);
+    if (formatAsIban) {
+      return formatIBAN(raw) || raw || 'Sin número';
+    }
+    return raw || 'Sin número';
   };
 
-  const handleSelect = (account: DtoCuenta) => {
-    const identifier = getAccountIdentifier(account);
-    onValueChange(identifier);
+  const handleSelect = (item: T) => {
+    onSelect(item);
     setModalVisible(false);
   };
+
+  const titular = value && getTitular ? getTitular(value) : null;
 
   return (
     <View style={styles.container}>
@@ -59,11 +76,6 @@ export function AccountSelect({
           <Text style={[styles.label, { color: textColor }]}>
             {label}
           </Text>
-          {selectedAccount && (
-            <Text style={[styles.balanceLabel, { color: '#a61612' }]}>
-              {formatAccountCurrency(selectedAccount.saldo, selectedAccount.moneda || 'CRC')}
-            </Text>
-          )}
         </View>
       )}
       <TouchableOpacity
@@ -75,18 +87,14 @@ export function AccountSelect({
             backgroundColor: inputBackgroundColor,
             borderColor: disabled ? borderColor + '80' : borderColor,
             opacity: disabled ? 0.5 : 1,
-          }
+          },
         ]}
       >
         <View style={styles.triggerContent}>
-          {selectedAccount ? (
-            <View style={styles.selectedAccount}>
-              <Text style={[styles.selectedText, { color: textColor }]} numberOfLines={1}>
-                {formatIBAN(selectedAccount.numeroCuentaIban) ||
-                  selectedAccount.numeroCuenta ||
-                  "Sin número"}
-              </Text>
-            </View>
+          {value ? (
+            <Text style={[styles.selectedText, { color: textColor }]} numberOfLines={1}>
+              {getFormattedText(value)}
+            </Text>
           ) : (
             <Text style={[styles.placeholder, { color: secondaryTextColor }]}>
               {placeholder}
@@ -95,6 +103,14 @@ export function AccountSelect({
           <ChevronDown size={20} color={secondaryTextColor} />
         </View>
       </TouchableOpacity>
+
+      {titular && (
+        <View style={styles.titularRow}>
+          <Text style={[styles.titularText, { color: secondaryTextColor }]}>
+            Titular: {titular}
+          </Text>
+        </View>
+      )}
 
       <Modal
         visible={modalVisible}
@@ -106,92 +122,88 @@ export function AccountSelect({
           <View style={[styles.modalContent, { backgroundColor: cardBackgroundColor }]}>
             <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
               <Text style={[styles.modalTitle, { color: '#a61612' }]}>
-                Seleccionar Cuenta
+                {modalTitle}
               </Text>
               <TouchableOpacity
                 onPress={() => setModalVisible(false)}
                 style={styles.closeButton}
               >
-                <X size={24} color={getTextColor(colorScheme)} />
+                <X size={24} color={textColor} />
               </TouchableOpacity>
             </View>
 
             <View style={styles.listContainer}>
               <FlatList
-                data={activeAccounts}
-                keyExtractor={(item) => getAccountIdentifier(item)}
+                data={items}
+                keyExtractor={(item) => getKey(item)}
                 style={styles.flatList}
                 contentContainerStyle={styles.flatListContent}
                 renderItem={({ item }) => {
-                const identifier = getAccountIdentifier(item);
-                const isSelected = value === identifier;
-                
-                return (
-                  <TouchableOpacity
-                    onPress={() => handleSelect(item)}
-                    style={[
-                      styles.accountItem,
-                      isSelected && { backgroundColor: '#a61612' + '15' },
-                      { borderBottomColor: borderColor + '30' }
-                    ]}
-                  >
-                    <View style={styles.accountItemContent}>
-                      <View style={styles.accountItemHeader}>
-                        <View style={styles.accountItemText}>
-                          <Text
-                            style={[
-                              styles.accountNumber,
-                              { color: isSelected ? '#a61612' : textColor }
-                            ]}
-                            numberOfLines={1}
-                          >
-                            {formatIBAN(item.numeroCuentaIban) ||
-                              item.numeroCuenta ||
-                              "Sin número"}
-                          </Text>
-                          {item.alias && (
+                  const isSelected = selectedKey === getKey(item);
+                  const alias = getAlias ? getAlias(item) : null;
+                  const itemTitular = getTitular ? getTitular(item) : null;
+
+                  return (
+                    <TouchableOpacity
+                      onPress={() => handleSelect(item)}
+                      style={[
+                        styles.accountItem,
+                        isSelected && { backgroundColor: '#a61612' + '15' },
+                        { borderBottomColor: borderColor + '30' },
+                      ]}
+                    >
+                      <View style={styles.accountItemContent}>
+                        <View style={styles.accountItemHeader}>
+                          <View style={styles.accountItemText}>
                             <Text
                               style={[
-                                styles.accountAlias,
-                                { color: isSelected ? '#a61612' + 'CC' : secondaryTextColor }
+                                styles.accountNumber,
+                                { color: isSelected ? '#a61612' : textColor },
                               ]}
                               numberOfLines={1}
                             >
-                              {item.alias}
+                              {getFormattedText(item)}
                             </Text>
-                          )}
+                            {alias && (
+                              <Text
+                                style={[
+                                  styles.accountAlias,
+                                  { color: isSelected ? '#a61612' + 'CC' : secondaryTextColor },
+                                ]}
+                                numberOfLines={1}
+                              >
+                                {alias}
+                              </Text>
+                            )}
+                          </View>
+                          {icon && React.cloneElement(icon, {
+                            color: isSelected ? '#a61612' : secondaryTextColor,
+                          })}
                         </View>
-                        <CreditCard size={18} color={isSelected ? '#a61612' : secondaryTextColor} />
+                        {itemTitular && (
+                          <View style={styles.accountItemFooter}>
+                            <Text
+                              style={[
+                                styles.accountTitular,
+                                { color: isSelected ? '#a61612' + 'CC' : secondaryTextColor },
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {itemTitular}
+                            </Text>
+                          </View>
+                        )}
                       </View>
-                      <View style={styles.accountItemFooter}>
-                        <Text
-                          style={[
-                            styles.accountCurrency,
-                            { color: isSelected ? '#a61612' + 'CC' : secondaryTextColor }
-                          ]}
-                        >
-                          {item.moneda || "CRC"}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.accountBalance,
-                            { color: isSelected ? '#a61612' : textColor }
-                          ]}
-                        >
-                          {formatAccountCurrency(item.saldo, item.moneda || "CRC")}
-                        </Text>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                );
-              }}
-              ListEmptyComponent={
-                <View style={styles.emptyContainer}>
-                  <Text style={[styles.emptyText, { color: secondaryTextColor }]}>
-                    No hay cuentas disponibles
-                  </Text>
-                </View>
-              }
+                    </TouchableOpacity>
+                  );
+                }}
+                ListEmptyComponent={
+                  <View style={styles.emptyContainer}>
+                    <Text style={[styles.emptyText, { color: secondaryTextColor }]}>
+                      {emptyMessage}
+                    </Text>
+                  </View>
+                }
               />
             </View>
           </View>
@@ -215,10 +227,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  balanceLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
   trigger: {
     height: 44,
     borderRadius: 6,
@@ -231,12 +239,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  selectedAccount: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flex: 1,
-  },
   selectedText: {
     fontSize: 16,
     fontWeight: '500',
@@ -245,6 +247,14 @@ const styles = StyleSheet.create({
   placeholder: {
     fontSize: 16,
     flex: 1,
+  },
+  titularRow: {
+    marginTop: 6,
+    paddingHorizontal: 4,
+  },
+  titularText: {
+    fontSize: 13,
+    opacity: 0.8,
   },
   modalBackdrop: {
     flex: 1,
@@ -313,12 +323,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  accountCurrency: {
+  accountTitular: {
     fontSize: 14,
-  },
-  accountBalance: {
-    fontSize: 16,
-    fontWeight: '600',
   },
   emptyContainer: {
     padding: 40,
@@ -328,4 +334,3 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
-

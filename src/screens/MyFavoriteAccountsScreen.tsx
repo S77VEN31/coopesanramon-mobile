@@ -252,6 +252,7 @@ export default function MyFavoriteAccountsScreen({ route, navigation }: Props) {
     <View style={[styles.container, { backgroundColor }]}>
       <View style={styles.content}>
         <ContentCard
+          description="Administra tus cuentas favoritas"
           fullHeight
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#a61612" colors={['#a61612']} />

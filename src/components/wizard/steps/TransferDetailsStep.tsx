@@ -1,9 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TextInput, useColorScheme } from 'react-native';
-import { Mail, DollarSign, FileText } from 'lucide-react-native';
-import { Card, CardContent } from '../../ui/Card';
+import { View, Text, StyleSheet, useColorScheme } from 'react-native';
+import { Mail, DollarSign, FileText, X } from 'lucide-react-native';
 import { Input } from '../../ui/Input';
-import { getTextColor, getSecondaryTextColor, getBorderColor, getInputBackgroundColor } from '../../../../App';
+import { getSecondaryTextColor } from '../../../../App';
 import { formatCurrency } from '../../../lib/utils/format.utils';
 import type { DtoCuenta } from '../../../services/api/accounts.api';
 
@@ -38,10 +37,7 @@ export default function TransferDetailsStep({
   isEmailRequired = false,
 }: TransferDetailsStepProps) {
   const colorScheme = useColorScheme();
-  const textColor = getTextColor(colorScheme);
-  const secondaryTextColor = getSecondaryTextColor(colorScheme);
-  const borderColor = getBorderColor(colorScheme);
-  const inputBackgroundColor = getInputBackgroundColor(colorScheme);
+  const iconColor = getSecondaryTextColor(colorScheme);
 
   const currencySymbol = sourceAccount?.moneda === 'USD' ? '$' : '₡';
   const amountNum = parseFloat(amount) || 0;
@@ -52,267 +48,172 @@ export default function TransferDetailsStep({
   const isSinpeMovil = transferType === 'sinpe-mobile';
   const descriptionMaxLength = isSinpeMovil ? 20 : 255;
   const descriptionMinLength = isSinpeMovil ? 0 : 15;
-  const descriptionValidLength =
-    description.trim().length >= descriptionMinLength &&
-    description.trim().length <= descriptionMaxLength;
+
+  const getAmountError = (): string | undefined => {
+    if (exceedsBalance) return 'El monto excede el saldo disponible';
+    if (amountError) return amountError;
+    return undefined;
+  };
+
+  const getDescriptionError = (): string | undefined => {
+    if (
+      !isSinpeMovil &&
+      description.trim().length > 0 &&
+      description.trim().length < descriptionMinLength
+    ) {
+      return `La descripción debe tener al menos ${descriptionMinLength} caracteres`;
+    }
+    return undefined;
+  };
+
+  const showAmountPreview = amount && !amountError && !exceedsBalance;
 
   return (
     <View style={styles.container}>
-      {/* Amount Section */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: textColor }]}>
-          Monto
-        </Text>
-        {sourceAccount && (
-          <View style={styles.balanceContainer}>
-            <Text style={[styles.balanceLabel, { color: secondaryTextColor }]}>
+      {/* Balance & preview info */}
+      {sourceAccount && (
+        <View style={styles.infoBox}>
+          <View style={styles.infoRow}>
+            <Text style={[styles.infoLabel, { color: iconColor }]}>
               Saldo disponible:
             </Text>
-            <Text style={[styles.balanceAmount, { color: '#a61612' }]}>
+            <Text style={styles.infoValue}>
               {formatCurrency(availableBalance, currency)}
             </Text>
           </View>
-        )}
-        <View style={styles.amountContainer}>
-          <Text style={[styles.currencySymbol, { color: secondaryTextColor }]}>
-            {currencySymbol}
-          </Text>
-          <TextInput
-            style={[
-              styles.amountInput,
-              {
-                backgroundColor: inputBackgroundColor,
-                borderColor:
-                  amountError || exceedsBalance ? '#991b1b' : borderColor,
-                color: textColor,
-              },
-            ]}
-            placeholder="0.00"
-            placeholderTextColor={secondaryTextColor}
-            value={amount}
-            onChangeText={onAmountChange}
-            keyboardType="numeric"
-            autoFocus
-          />
-        </View>
-        {exceedsBalance && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>
-              El monto excede el saldo disponible
-            </Text>
-          </View>
-        )}
-        {amountError && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{amountError}</Text>
-          </View>
-        )}
-        {amount && !amountError && !exceedsBalance && (
-          <View style={styles.previewContainer}>
-            <Text style={[styles.previewLabel, { color: secondaryTextColor }]}>
-              Monto a transferir:
-            </Text>
-            <Text style={[styles.previewAmount, { color: '#a61612' }]}>
-              {formatCurrency(amountNum, currency)}
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {/* Description Section */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: textColor }]}>
-          Descripción
-          {!isSinpeMovil && (
-            <Text style={styles.required}> *</Text>
-          )}
-        </Text>
-        <TextInput
-          style={[
-            styles.descriptionInput,
-            {
-              backgroundColor: inputBackgroundColor,
-              borderColor:
-                descriptionValidLength || description.length === 0
-                  ? borderColor
-                  : '#dc2626',
-              color: textColor,
-            },
-          ]}
-          placeholder={
-            isSinpeMovil
-              ? 'Descripción (opcional)'
-              : 'Ej: Pago de servicios, Transferencia personal, etc.'
-          }
-          placeholderTextColor={secondaryTextColor}
-          value={description}
-          onChangeText={onDescriptionChange}
-          multiline
-          numberOfLines={isSinpeMovil ? 3 : 4}
-          textAlignVertical="top"
-          maxLength={descriptionMaxLength}
-        />
-        <View style={styles.descriptionFooter}>
-          {!isSinpeMovil && (
-            <Text
-              style={[
-                styles.helperText,
-                {
-                  color:
-                    description.trim().length < descriptionMinLength &&
-                    description.length > 0
-                      ? '#dc2626'
-                      : secondaryTextColor,
-                },
-              ]}
-            >
-              Mínimo {descriptionMinLength} caracteres
-            </Text>
-          )}
-          <Text
-            style={[
-              styles.counter,
-              {
-                color:
-                  description.length > descriptionMaxLength
-                    ? '#dc2626'
-                    : secondaryTextColor,
-              },
-            ]}
-          >
-            {description.length}/{descriptionMaxLength}
-          </Text>
-        </View>
-        {description.trim().length > 0 &&
-          description.trim().length < descriptionMinLength &&
-          !isSinpeMovil && (
-            <View style={styles.warningContainer}>
-              <Text style={styles.warningText}>
-                La descripción debe tener al menos {descriptionMinLength}{' '}
-                caracteres
+          {showAmountPreview && (
+            <View style={styles.infoRow}>
+              <Text style={[styles.infoLabel, { color: iconColor }]}>
+                Monto a transferir:
+              </Text>
+              <Text style={styles.infoValue}>
+                {formatCurrency(amountNum, currency)}
               </Text>
             </View>
           )}
+        </View>
+      )}
+
+      {/* Amount */}
+      <Input
+        label="Monto"
+        placeholder="0.00"
+        value={amount}
+        onChangeText={onAmountChange}
+        keyboardType="numeric"
+        autoFocus
+        leftIcon={
+          <Text style={[styles.currencyIcon, { color: iconColor }]}>
+            {currencySymbol}
+          </Text>
+        }
+        rightIcon={amount ? <X size={18} color={iconColor} /> : undefined}
+        onRightIconPress={() => onAmountChange('')}
+        error={getAmountError()}
+        colorScheme={colorScheme}
+      />
+
+      {/* Description */}
+      <Input
+        label={isSinpeMovil ? 'Descripción' : 'Descripción *'}
+        placeholder={
+          isSinpeMovil
+            ? 'Descripción (opcional)'
+            : 'Ej: Pago de servicios, Transferencia personal, etc.'
+        }
+        value={description}
+        onChangeText={onDescriptionChange}
+        multiline
+        numberOfLines={isSinpeMovil ? 3 : 4}
+        maxLength={descriptionMaxLength}
+        leftIcon={<FileText size={16} color={iconColor} />}
+        rightIcon={description ? <X size={18} color={iconColor} /> : undefined}
+        onRightIconPress={() => onDescriptionChange('')}
+        error={getDescriptionError()}
+        colorScheme={colorScheme}
+      />
+
+      {/* Description footer */}
+      <View style={styles.descriptionFooter}>
+        {!isSinpeMovil && (
+          <Text
+            style={[
+              styles.helperText,
+              {
+                color:
+                  description.trim().length < descriptionMinLength &&
+                  description.length > 0
+                    ? '#dc2626'
+                    : iconColor,
+              },
+            ]}
+          >
+            Mínimo {descriptionMinLength} caracteres
+          </Text>
+        )}
+        <Text
+          style={[
+            styles.counter,
+            {
+              color:
+                description.length > descriptionMaxLength
+                  ? '#dc2626'
+                  : iconColor,
+            },
+          ]}
+        >
+          {description.length}/{descriptionMaxLength}
+        </Text>
       </View>
 
-      {/* Email Section */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: textColor }]}>
-          Correo Electrónico
-          {isEmailRequired && <Text style={styles.required}> *</Text>}
-        </Text>
-        <Input
-          placeholder="ejemplo@correo.com"
-          value={email}
-          onChangeText={onEmailChange}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoComplete="email"
-          error={emailError || undefined}
-          leftIcon={<Mail size={16} color={secondaryTextColor} />}
-        />
-        {emailError && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{emailError}</Text>
-          </View>
-        )}
-        {!isEmailRequired && (
-          <View style={styles.optionalContainer}>
-            <Text style={[styles.optionalText, { color: secondaryTextColor }]}>
-              Este campo es opcional. Puedes omitirlo si no deseas enviar un
-              comprobante por correo.
-            </Text>
-          </View>
-        )}
-      </View>
+      {/* Email */}
+      <Input
+        label={isEmailRequired ? 'Correo Electrónico *' : 'Correo Electrónico'}
+        placeholder="ejemplo@correo.com"
+        value={email}
+        onChangeText={onEmailChange}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        leftIcon={<Mail size={16} color={iconColor} />}
+        rightIcon={email ? <X size={18} color={iconColor} /> : undefined}
+        onRightIconPress={() => onEmailChange('')}
+        error={emailError || undefined}
+        colorScheme={colorScheme}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    gap: 16,
   },
-  section: {
-    marginBottom: 32,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 16,
-  },
-  required: {
-    color: '#dc2626',
-  },
-  balanceContainer: {
+  infoBox: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    padding: 12,
     borderRadius: 8,
     backgroundColor: 'rgba(166, 22, 18, 0.05)',
-    marginBottom: 16,
   },
-  balanceLabel: {
+  infoLabel: {
     fontSize: 14,
     fontWeight: '500',
   },
-  balanceAmount: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  amountContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    position: 'relative',
-    marginBottom: 8,
-  },
-  currencySymbol: {
-    position: 'absolute',
-    left: 16,
-    fontSize: 24,
-    fontWeight: '700',
-    zIndex: 1,
-  },
-  amountInput: {
-    height: 64,
-    flex: 1,
-    borderRadius: 12,
-    borderWidth: 2,
-    fontSize: 24,
-    fontWeight: '600',
-    paddingHorizontal: 16,
-    paddingLeft: 48,
-    textAlign: 'center',
-  },
-  previewContainer: {
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: 'rgba(166, 22, 18, 0.05)',
-    alignItems: 'center',
-  },
-  previewLabel: {
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  previewAmount: {
-    fontSize: 24,
-    fontWeight: '700',
-  },
-  descriptionInput: {
-    minHeight: 120,
-    borderRadius: 12,
-    borderWidth: 2,
+  infoValue: {
     fontSize: 16,
-    padding: 16,
-    marginBottom: 8,
+    fontWeight: '700',
+    color: '#a61612',
+  },
+  currencyIcon: {
+    fontSize: 16,
+    fontWeight: '700',
   },
   descriptionFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginTop: -8,
   },
   helperText: {
     fontSize: 12,
@@ -321,37 +222,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
-  warningContainer: {
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: 'rgba(220, 38, 38, 0.1)',
-  },
-  warningText: {
-    fontSize: 14,
-    color: '#dc2626',
-    textAlign: 'center',
-  },
-  errorContainer: {
-    marginTop: 8,
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: 'rgba(220, 38, 38, 0.1)',
-  },
-  errorText: {
-    fontSize: 14,
-    color: '#dc2626',
-    textAlign: 'center',
-  },
-  optionalContainer: {
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: 'rgba(166, 22, 18, 0.05)',
-  },
   optionalText: {
     fontSize: 12,
     textAlign: 'center',
     lineHeight: 18,
+    flex: 1,
   },
 });
-

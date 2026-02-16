@@ -18,7 +18,7 @@ interface DatePickerProps {
 export function DatePicker({
   date,
   onDateChange,
-  placeholder = "__/__",
+  placeholder = "DD/MM/AAAA",
   disabled = false,
   fromDate,
   toDate,
@@ -135,7 +135,7 @@ export function DatePicker({
         >
           <View style={styles.modalBackdrop}>
             <View style={[styles.modalContent, { backgroundColor: cardBackgroundColor }]}>
-              <View style={styles.modalHeader}>
+              <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
                 <Text style={[styles.modalTitle, { color: '#a61612' }]}>
                   Seleccionar Fecha
                 </Text>
@@ -229,7 +229,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
   },
   modalTitle: {
     fontSize: 20,

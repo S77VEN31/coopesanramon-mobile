@@ -82,7 +82,7 @@ export function SelectInput({
       >
         <View style={styles.modalBackdrop}>
           <View style={[styles.modalContent, { backgroundColor: cardBackgroundColor }]}>
-            <View style={styles.modalHeader}>
+            <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
               <Text style={[styles.modalTitle, { color: '#a61612' }]}>
                 Seleccionar Opción
               </Text>
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -192,7 +192,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
     flexShrink: 0,
   },
   modalTitle: {

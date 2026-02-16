@@ -66,7 +66,7 @@ export default function LoanSelect({
         <View style={styles.overlay}>
           <View style={[styles.modalContainer, { backgroundColor: cardBg }]}>
             <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
-              <Text style={[styles.modalTitle, { color: textColor }]}>Seleccionar préstamo</Text>
+              <Text style={[styles.modalTitle, { color: '#a61612' }]}>Seleccionar préstamo</Text>
               <Pressable onPress={() => setIsOpen(false)}>
                 <Text style={styles.modalClose}>Cerrar</Text>
               </Pressable>

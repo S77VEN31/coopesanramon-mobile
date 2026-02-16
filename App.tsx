@@ -75,7 +75,7 @@ export const getInputBackgroundColor = (colorScheme: 'light' | 'dark' | null | u
 };
 
 export const getCardBgColor = (colorScheme: 'light' | 'dark' | null | undefined) => {
-  return colorScheme === 'dark' ? '#323232' : '#f9f9f9';
+  return colorScheme === 'dark' ? '#323232' : '#ffffff';
 };
 
 const styles = StyleSheet.create({

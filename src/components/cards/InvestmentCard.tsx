@@ -156,7 +156,8 @@ const styles = StyleSheet.create({
   },
   body: {
     paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingTop: 14,
+    paddingBottom: 4,
   },
   amountSection: {
     marginBottom: 4,

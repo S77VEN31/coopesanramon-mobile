@@ -16,12 +16,15 @@ export default function WalletInfoCard({ titular, monedero, nombreBanco, style }
   const secondaryTextColor = getSecondaryTextColor(colorScheme);
   const borderColor = getBorderColor(colorScheme);
   const cardBg = getCardBgColor(colorScheme);
+  const isDark = colorScheme === 'dark';
+  const iconColor = isDark ? '#ffffff' : '#a61612';
+  const iconBg = isDark ? '#a61612' : 'rgba(166, 22, 18, 0.1)';
 
   return (
     <View style={[styles.container, { borderColor, backgroundColor: cardBg }, style]}>
       <View style={styles.row}>
-        <View style={styles.iconContainer}>
-          <User size={14} color="#ffffff" />
+        <View style={[styles.iconContainer, { backgroundColor: iconBg }]}>
+          <User size={14} color={iconColor} />
         </View>
         <View style={styles.info}>
           <Text style={[styles.label, { color: secondaryTextColor }]}>Titular</Text>
@@ -30,8 +33,8 @@ export default function WalletInfoCard({ titular, monedero, nombreBanco, style }
       </View>
       <View style={[styles.divider, { backgroundColor: borderColor }]} />
       <View style={styles.row}>
-        <View style={styles.iconContainer}>
-          <Phone size={14} color="#ffffff" />
+        <View style={[styles.iconContainer, { backgroundColor: iconBg }]}>
+          <Phone size={14} color={iconColor} />
         </View>
         <View style={styles.info}>
           <Text style={[styles.label, { color: secondaryTextColor }]}>Teléfono</Text>
@@ -40,8 +43,8 @@ export default function WalletInfoCard({ titular, monedero, nombreBanco, style }
       </View>
       <View style={[styles.divider, { backgroundColor: borderColor }]} />
       <View style={styles.row}>
-        <View style={styles.iconContainer}>
-          <Building2 size={14} color="#ffffff" />
+        <View style={[styles.iconContainer, { backgroundColor: iconBg }]}>
+          <Building2 size={14} color={iconColor} />
         </View>
         <View style={styles.info}>
           <Text style={[styles.label, { color: secondaryTextColor }]}>Entidad</Text>
@@ -67,7 +70,6 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#a61612',
     alignItems: 'center',
     justifyContent: 'center',
   },

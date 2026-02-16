@@ -60,8 +60,9 @@ interface CardDescriptionProps {
 }
 
 export const CardDescription: React.FC<CardDescriptionProps> = ({ children, style, colorScheme = 'light' }) => {
+  const descriptionColor = getTextColor(colorScheme);
   return (
-    <Text style={[styles.cardDescription, { color: '#ffffff' }, style]}>
+    <Text style={[styles.cardDescription, { color: descriptionColor }, style]}>
       {children}
     </Text>
   );

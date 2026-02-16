@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, useColorScheme, Modal, TouchableWithoutFeedback } from 'react-native';
 import { MoreVertical, Pencil, Trash2 } from 'lucide-react-native';
 import { getTextColor, getSecondaryTextColor, getBorderColor, getCardBgColor } from '../../../App';
-import { Card, CardHeader, CardContent } from '@/components/ui/Card';
+import { Card, CardContent } from '@/components/ui/Card';
 import type { FavoriteType } from '@/constants/favorite-accounts.constants';
 import type { CuentaFavoritaInternaItem, CuentaSinpeFavoritaItem, MonederoFavoritoItem } from '@/services/api/favorites.api';
 
@@ -54,6 +54,10 @@ export default function FavoriteListItem({ item, type, onEdit, onDelete }: Favor
   const borderColor = getBorderColor(colorScheme);
   const cardBg = getCardBgColor(colorScheme);
 
+  const isDark = colorScheme === 'dark';
+  const iconColor = isDark ? '#ffffff' : '#a61612';
+  const iconBg = isDark ? '#a61612' : 'rgba(166, 22, 18, 0.1)';
+
   const info = getDisplayInfo(item, type);
   const [menuVisible, setMenuVisible] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 });
@@ -78,18 +82,18 @@ export default function FavoriteListItem({ item, type, onEdit, onDelete }: Favor
 
   return (
     <Card style={styles.container} colorScheme={colorScheme}>
-      <CardHeader style={styles.header}>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          {info.alias || info.account}
-        </Text>
-      </CardHeader>
       <CardContent style={styles.body}>
         <View style={styles.bodyRow}>
           <View style={styles.bodyContent}>
+            {info.alias ? (
+              <Text style={styles.aliasTitle} numberOfLines={1}>
+                {info.alias.toUpperCase()}
+              </Text>
+            ) : null}
             <Text style={[styles.titular, { color: secondaryTextColor }]} numberOfLines={1}>
               {info.titular.toUpperCase()}
             </Text>
-            <Text style={[styles.account, { color: '#ffffff' }]} numberOfLines={1}>
+            <Text style={[styles.account, { color: textColor }]} numberOfLines={1}>
               {info.account}
             </Text>
             {info.currency && (
@@ -101,8 +105,8 @@ export default function FavoriteListItem({ item, type, onEdit, onDelete }: Favor
             )}
           </View>
           <View ref={buttonRef} collapsable={false}>
-            <TouchableOpacity onPress={handleOpenMenu} style={styles.moreButton} activeOpacity={0.7}>
-              <MoreVertical size={18} color="#ffffff" />
+            <TouchableOpacity onPress={handleOpenMenu} style={[styles.moreButton, { backgroundColor: iconBg }]} activeOpacity={0.7}>
+              <MoreVertical size={18} color={iconColor} />
             </TouchableOpacity>
           </View>
         </View>
@@ -133,22 +137,15 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: 10,
   },
-  header: {
-    backgroundColor: '#a61612',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-    alignItems: 'flex-start',
-  },
-  headerTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#ffffff',
-  },
   body: {
     paddingHorizontal: 14,
     paddingVertical: 12,
+  },
+  aliasTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 4,
+    color: '#a61612',
   },
   bodyRow: {
     flexDirection: 'row',
@@ -190,7 +187,6 @@ const styles = StyleSheet.create({
   moreButton: {
     padding: 6,
     borderRadius: 16,
-    backgroundColor: '#a61612',
   },
   menuBackdrop: {
     flex: 1,

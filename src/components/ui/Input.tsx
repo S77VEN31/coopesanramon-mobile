@@ -21,6 +21,10 @@ interface InputProps {
   returnKeyType?: 'done' | 'go' | 'next' | 'search' | 'send' | 'default';
   onSubmitEditing?: () => void;
   autoFocus?: boolean;
+  multiline?: boolean;
+  numberOfLines?: number;
+  textAlignVertical?: 'auto' | 'top' | 'center' | 'bottom';
+  maxLength?: number;
 }
 
 export const Input = forwardRef<TextInput, InputProps>(({
@@ -42,6 +46,10 @@ export const Input = forwardRef<TextInput, InputProps>(({
   returnKeyType = 'default',
   onSubmitEditing,
   autoFocus = false,
+  multiline = false,
+  numberOfLines,
+  textAlignVertical,
+  maxLength,
 }, ref) => {
   const [isFocused, setIsFocused] = useState(false);
   const textColor = getTextColor(colorScheme);
@@ -58,7 +66,7 @@ export const Input = forwardRef<TextInput, InputProps>(({
       )}
       <View style={styles.inputWrapper}>
         {leftIcon && (
-          <View style={styles.leftIconContainer}>
+          <View style={[styles.leftIconContainer, multiline ? styles.iconContainerMultiline : undefined]}>
             {leftIcon}
           </View>
         )}
@@ -75,6 +83,10 @@ export const Input = forwardRef<TextInput, InputProps>(({
           returnKeyType={returnKeyType}
           onSubmitEditing={onSubmitEditing}
           autoFocus={autoFocus}
+          multiline={multiline}
+          numberOfLines={numberOfLines}
+          textAlignVertical={multiline ? (textAlignVertical || 'top') : textAlignVertical}
+          maxLength={maxLength}
           onPressIn={() => setIsFocused(true)}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
@@ -83,6 +95,7 @@ export const Input = forwardRef<TextInput, InputProps>(({
             leftIcon ? styles.inputWithLeftIcon : undefined,
             rightIcon ? styles.inputWithRightIcon : undefined,
             !editable ? styles.inputDisabled : undefined,
+            multiline ? { height: undefined, minHeight: numberOfLines ? numberOfLines * 24 + 20 : 100, paddingTop: 12 } : undefined,
             {
               backgroundColor: inputBackgroundColor,
               borderColor: error ? '#991b1b' : (isFocused ? '#a61612' : borderColor),
@@ -93,7 +106,7 @@ export const Input = forwardRef<TextInput, InputProps>(({
         {rightIcon && (
           <TouchableOpacity
             onPress={onRightIconPress}
-            style={styles.rightIconContainer}
+            style={[styles.rightIconContainer, multiline ? styles.iconContainerMultiline : undefined]}
             activeOpacity={0.7}
           >
             {rightIcon}
@@ -150,6 +163,10 @@ const styles = StyleSheet.create({
     top: '50%',
     zIndex: 10,
     transform: [{ translateY: -8 }],
+  },
+  iconContainerMultiline: {
+    top: 14,
+    transform: [],
   },
   errorText: {
     fontSize: 14,

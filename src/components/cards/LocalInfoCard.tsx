@@ -16,12 +16,15 @@ export default function LocalInfoCard({ titular, numeroCuenta, moneda, style }: 
   const secondaryTextColor = getSecondaryTextColor(colorScheme);
   const borderColor = getBorderColor(colorScheme);
   const cardBg = getCardBgColor(colorScheme);
+  const isDark = colorScheme === 'dark';
+  const iconColor = isDark ? '#ffffff' : '#a61612';
+  const iconBg = isDark ? '#a61612' : 'rgba(166, 22, 18, 0.1)';
 
   return (
     <View style={[styles.container, { borderColor, backgroundColor: cardBg }, style]}>
       <View style={styles.row}>
-        <View style={styles.iconContainer}>
-          <User size={14} color="#ffffff" />
+        <View style={[styles.iconContainer, { backgroundColor: iconBg }]}>
+          <User size={14} color={iconColor} />
         </View>
         <View style={styles.info}>
           <Text style={[styles.label, { color: secondaryTextColor }]}>Titular</Text>
@@ -30,8 +33,8 @@ export default function LocalInfoCard({ titular, numeroCuenta, moneda, style }: 
       </View>
       <View style={[styles.divider, { backgroundColor: borderColor }]} />
       <View style={styles.row}>
-        <View style={styles.iconContainer}>
-          <CreditCard size={14} color="#ffffff" />
+        <View style={[styles.iconContainer, { backgroundColor: iconBg }]}>
+          <CreditCard size={14} color={iconColor} />
         </View>
         <View style={styles.info}>
           <Text style={[styles.label, { color: secondaryTextColor }]}>Cuenta</Text>
@@ -42,8 +45,8 @@ export default function LocalInfoCard({ titular, numeroCuenta, moneda, style }: 
         <>
           <View style={[styles.divider, { backgroundColor: borderColor }]} />
           <View style={styles.row}>
-            <View style={styles.iconContainer}>
-              <Coins size={14} color="#ffffff" />
+            <View style={[styles.iconContainer, { backgroundColor: iconBg }]}>
+              <Coins size={14} color={iconColor} />
             </View>
             <View style={styles.info}>
               <Text style={[styles.label, { color: secondaryTextColor }]}>Moneda</Text>
@@ -71,7 +74,6 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#a61612',
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, useColorScheme, Pressable, Modal, FlatList } from 'react-native';
-import { ChevronDown, CreditCard, Phone, Star, Hash, User, ArrowUpRight, ArrowDownLeft, Clock, Clock3, X } from 'lucide-react-native';
-import { Card, CardContent } from '../../ui/Card';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
+import { CreditCard, Phone, Star, Hash, User, ArrowUpRight, ArrowDownLeft, Clock, Clock3 } from 'lucide-react-native';
 import { Input } from '../../ui/Input';
+import { IbanInput } from '../../ui/IbanInput';
 import { AccountSelect } from '../../inputs/AccountSelect';
-import { getTextColor, getSecondaryTextColor, getBorderColor, getInputBackgroundColor, getCardBackgroundColor } from '../../../../App';
-import { formatCurrency, formatIBAN } from '../../../lib/utils/format.utils';
+import { FavoriteAccountSelect } from '../../inputs/FavoriteAccountSelect';
+import { getTextColor, getSecondaryTextColor } from '../../../../App';
 import { getAccountIdentifier } from '../../../lib/utils/accounts.utils';
 import type { DtoCuenta } from '../../../services/api/accounts.api';
 import type { CuentaFavoritaInternaItem } from '../../../hooks/use-local-transfer';
@@ -119,12 +119,6 @@ export default function AccountSelectionStep({
   const colorScheme = useColorScheme();
   const textColor = getTextColor(colorScheme);
   const secondaryTextColor = getSecondaryTextColor(colorScheme);
-  const borderColor = getBorderColor(colorScheme);
-  const inputBackgroundColor = getInputBackgroundColor(colorScheme);
-  const cardBackgroundColor = getCardBackgroundColor(colorScheme);
-  const [localFavModalVisible, setLocalFavModalVisible] = useState(false);
-  const [sinpeFavModalVisible, setSinpeFavModalVisible] = useState(false);
-  const [sinpeMovilFavModalVisible, setSinpeMovilFavModalVisible] = useState(false);
 
   const renderLocalDestination = () => {
     if (!localDestinationType || !onLocalDestinationTypeChange) return null;
@@ -201,136 +195,21 @@ export default function AccountSelectionStep({
 
         {localDestinationType === 'favorites' && (
           <View style={styles.field}>
-            <TouchableOpacity
-              onPress={() => setLocalFavModalVisible(true)}
+            <FavoriteAccountSelect<CuentaFavoritaInternaItem>
+              items={localFavoriteAccounts}
+              value={selectedFavoriteAccount}
+              onSelect={(item) => onLocalFavoriteSelect?.(item)}
+              placeholder="Seleccionar cuenta favorita"
               disabled={isLoadingFavorites || localFavoriteAccounts.length === 0}
-              style={[
-                styles.dropdownTrigger,
-                {
-                  backgroundColor: inputBackgroundColor,
-                  borderColor: (isLoadingFavorites || localFavoriteAccounts.length === 0) ? borderColor + '80' : borderColor,
-                  opacity: (isLoadingFavorites || localFavoriteAccounts.length === 0) ? 0.5 : 1,
-                },
-              ]}
-            >
-              <View style={styles.dropdownTriggerContent}>
-                {selectedFavoriteAccount ? (
-                  <View style={styles.dropdownSelected}>
-                    <CreditCard size={16} color="#a61612" />
-                    <Text style={[styles.dropdownSelectedText, { color: textColor }]} numberOfLines={1}>
-                      {formatIBAN(selectedFavoriteAccount.numeroCuenta) || selectedFavoriteAccount.numeroCuenta || ''}
-                    </Text>
-                  </View>
-                ) : (
-                  <Text style={[styles.dropdownPlaceholder, { color: secondaryTextColor }]}>
-                    Seleccionar cuenta favorita
-                  </Text>
-                )}
-                <ChevronDown size={20} color={secondaryTextColor} />
-              </View>
-            </TouchableOpacity>
-
-            {selectedFavoriteAccount && (
-              <View style={styles.favInfoRow}>
-                <Text style={[styles.favInfoText, { color: secondaryTextColor }]}>
-                  Titular: {selectedFavoriteAccount.titular || 'N/A'}
-                </Text>
-              </View>
-            )}
-
-            <Modal
-              visible={localFavModalVisible}
-              transparent={true}
-              animationType="slide"
-              onRequestClose={() => setLocalFavModalVisible(false)}
-            >
-              <View style={styles.modalBackdrop}>
-                <View style={[styles.modalContent, { backgroundColor: cardBackgroundColor }]}>
-                  <View style={styles.modalHeader}>
-                    <Text style={[styles.modalTitle, { color: '#a61612' }]}>
-                      Seleccionar Cuenta Favorita
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => setLocalFavModalVisible(false)}
-                      style={styles.closeButton}
-                    >
-                      <X size={24} color={textColor} />
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={styles.modalListContainer}>
-                    <FlatList
-                      data={localFavoriteAccounts}
-                      keyExtractor={(item) => item.id?.toString() || item.numeroCuenta || ''}
-                      style={styles.flatList}
-                      contentContainerStyle={styles.flatListContent}
-                      renderItem={({ item }) => {
-                        const isSelected = selectedFavoriteAccount?.numeroCuenta === item.numeroCuenta;
-                        return (
-                          <TouchableOpacity
-                            onPress={() => {
-                              onLocalFavoriteSelect?.(item);
-                              setLocalFavModalVisible(false);
-                            }}
-                            style={[
-                              styles.dropdownItem,
-                              isSelected && { backgroundColor: '#a61612' + '15' },
-                              { borderBottomColor: borderColor + '30' },
-                            ]}
-                          >
-                            <View style={styles.dropdownItemContent}>
-                              <View style={styles.dropdownItemHeader}>
-                                <CreditCard size={18} color={isSelected ? '#a61612' : secondaryTextColor} />
-                                <View style={styles.dropdownItemText}>
-                                  <Text
-                                    style={[
-                                      styles.dropdownItemAccount,
-                                      { color: isSelected ? '#a61612' : textColor },
-                                    ]}
-                                    numberOfLines={1}
-                                  >
-                                    {formatIBAN(item.numeroCuenta) || item.numeroCuenta || 'Sin número'}
-                                  </Text>
-                                  {item.titular && (
-                                    <Text
-                                      style={[
-                                        styles.dropdownItemSubtext,
-                                        { color: isSelected ? '#a61612' + 'CC' : secondaryTextColor },
-                                      ]}
-                                      numberOfLines={1}
-                                    >
-                                      {item.titular}
-                                    </Text>
-                                  )}
-                                  {item.alias && (
-                                    <Text
-                                      style={[
-                                        styles.dropdownItemSubtext,
-                                        { color: isSelected ? '#a61612' + 'CC' : secondaryTextColor },
-                                      ]}
-                                      numberOfLines={1}
-                                    >
-                                      {item.alias}
-                                    </Text>
-                                  )}
-                                </View>
-                              </View>
-                            </View>
-                          </TouchableOpacity>
-                        );
-                      }}
-                      ListEmptyComponent={
-                        <View style={styles.emptyContainer}>
-                          <Text style={[styles.emptyText, { color: secondaryTextColor }]}>
-                            No hay cuentas favoritas disponibles
-                          </Text>
-                        </View>
-                      }
-                    />
-                  </View>
-                </View>
-              </View>
-            </Modal>
+              modalTitle="Seleccionar Cuenta Favorita"
+              emptyMessage="No hay cuentas favoritas disponibles"
+              getKey={(item) => item.id?.toString() || item.numeroCuenta || ''}
+              getDisplayText={(item) => item.numeroCuenta || ''}
+              getAlias={(item) => item.alias}
+              getTitular={(item) => item.titular}
+              formatAsIban={true}
+              icon={<CreditCard size={18} />}
+            />
           </View>
         )}
 
@@ -359,16 +238,6 @@ export default function AccountSelectionStep({
               error={destinationFormatError || accountValidationError || undefined}
               leftIcon={<CreditCard size={16} color={secondaryTextColor} />}
             />
-            {validatedAccountInfo && (
-              <Card style={styles.validatedCard} colorScheme={colorScheme}>
-                <View style={styles.topBorder} />
-                <CardContent style={styles.cardContent}>
-                  <Text style={[styles.validatedText, { color: textColor }]}>
-                    Titular: {validatedAccountInfo.titular || 'N/A'}
-                  </Text>
-                </CardContent>
-              </Card>
-            )}
           </View>
         )}
       </>
@@ -571,12 +440,9 @@ export default function AccountSelectionStep({
             >
               <View style={styles.dropdownTriggerContent}>
                 {selectedSinpeFavoriteAccount ? (
-                  <View style={styles.dropdownSelected}>
-                    <CreditCard size={16} color="#a61612" />
-                    <Text style={[styles.dropdownSelectedText, { color: textColor }]} numberOfLines={1}>
-                      {formatIBAN(selectedSinpeFavoriteAccount.numeroCuentaDestino) || selectedSinpeFavoriteAccount.numeroCuentaDestino || ''}
-                    </Text>
-                  </View>
+                  <Text style={[styles.dropdownSelectedText, { color: textColor }]} numberOfLines={1}>
+                    {formatIBAN(selectedSinpeFavoriteAccount.numeroCuentaDestino) || selectedSinpeFavoriteAccount.numeroCuentaDestino || ''}
+                  </Text>
                 ) : (
                   <Text style={[styles.dropdownPlaceholder, { color: secondaryTextColor }]}>
                     Seleccionar cuenta favorita
@@ -636,7 +502,6 @@ export default function AccountSelectionStep({
                           >
                             <View style={styles.dropdownItemContent}>
                               <View style={styles.dropdownItemHeader}>
-                                <CreditCard size={18} color={isSelected ? '#a61612' : secondaryTextColor} />
                                 <View style={styles.dropdownItemText}>
                                   <Text
                                     style={[
@@ -647,17 +512,6 @@ export default function AccountSelectionStep({
                                   >
                                     {formatIBAN(item.numeroCuentaDestino) || item.numeroCuentaDestino || 'Sin número'}
                                   </Text>
-                                  {item.titularDestino && (
-                                    <Text
-                                      style={[
-                                        styles.dropdownItemSubtext,
-                                        { color: isSelected ? '#a61612' + 'CC' : secondaryTextColor },
-                                      ]}
-                                      numberOfLines={1}
-                                    >
-                                      {item.titularDestino}
-                                    </Text>
-                                  )}
                                   {item.alias && (
                                     <Text
                                       style={[
@@ -670,7 +524,21 @@ export default function AccountSelectionStep({
                                     </Text>
                                   )}
                                 </View>
+                                <CreditCard size={18} color={isSelected ? '#a61612' : secondaryTextColor} />
                               </View>
+                              {item.titularDestino && (
+                                <View style={styles.dropdownItemFooter}>
+                                  <Text
+                                    style={[
+                                      styles.dropdownItemSubtext,
+                                      { color: isSelected ? '#a61612' + 'CC' : secondaryTextColor },
+                                    ]}
+                                    numberOfLines={1}
+                                  >
+                                    {item.titularDestino}
+                                  </Text>
+                                </View>
+                              )}
                             </View>
                           </TouchableOpacity>
                         );
@@ -707,16 +575,6 @@ export default function AccountSelectionStep({
               }
               leftIcon={<CreditCard size={16} color={secondaryTextColor} />}
             />
-            {validatedSinpeAccountInfo && (
-              <Card style={styles.validatedCard} colorScheme={colorScheme}>
-                <View style={styles.topBorder} />
-                <CardContent style={styles.cardContent}>
-                  <Text style={[styles.validatedText, { color: textColor }]}>
-                    Titular: {validatedSinpeAccountInfo.titularDestino || 'N/A'}
-                  </Text>
-                </CardContent>
-              </Card>
-            )}
           </View>
         )}
       </>
@@ -793,12 +651,9 @@ export default function AccountSelectionStep({
             >
               <View style={styles.dropdownTriggerContent}>
                 {selectedSinpeMovilFavoriteWallet ? (
-                  <View style={styles.dropdownSelected}>
-                    <Phone size={16} color="#a61612" />
-                    <Text style={[styles.dropdownSelectedText, { color: textColor }]} numberOfLines={1}>
-                      {selectedSinpeMovilFavoriteWallet.monedero || ''}
-                    </Text>
-                  </View>
+                  <Text style={[styles.dropdownSelectedText, { color: textColor }]} numberOfLines={1}>
+                    {selectedSinpeMovilFavoriteWallet.monedero || ''}
+                  </Text>
                 ) : (
                   <Text style={[styles.dropdownPlaceholder, { color: secondaryTextColor }]}>
                     Seleccionar monedero favorito
@@ -858,7 +713,6 @@ export default function AccountSelectionStep({
                           >
                             <View style={styles.dropdownItemContent}>
                               <View style={styles.dropdownItemHeader}>
-                                <Phone size={18} color={isSelected ? '#a61612' : secondaryTextColor} />
                                 <View style={styles.dropdownItemText}>
                                   <Text
                                     style={[
@@ -869,17 +723,6 @@ export default function AccountSelectionStep({
                                   >
                                     {item.monedero || 'Sin número'}
                                   </Text>
-                                  {item.titular && (
-                                    <Text
-                                      style={[
-                                        styles.dropdownItemSubtext,
-                                        { color: isSelected ? '#a61612' + 'CC' : secondaryTextColor },
-                                      ]}
-                                      numberOfLines={1}
-                                    >
-                                      {item.titular}
-                                    </Text>
-                                  )}
                                   {item.alias && (
                                     <Text
                                       style={[
@@ -892,7 +735,21 @@ export default function AccountSelectionStep({
                                     </Text>
                                   )}
                                 </View>
+                                <Phone size={18} color={isSelected ? '#a61612' : secondaryTextColor} />
                               </View>
+                              {item.titular && (
+                                <View style={styles.dropdownItemFooter}>
+                                  <Text
+                                    style={[
+                                      styles.dropdownItemSubtext,
+                                      { color: isSelected ? '#a61612' + 'CC' : secondaryTextColor },
+                                    ]}
+                                    numberOfLines={1}
+                                  >
+                                    {item.titular}
+                                  </Text>
+                                </View>
+                              )}
                             </View>
                           </TouchableOpacity>
                         );
@@ -926,16 +783,6 @@ export default function AccountSelectionStep({
               error={sinpeMovilMonederoError || undefined}
               leftIcon={<Phone size={16} color={secondaryTextColor} />}
             />
-            {sinpeMovilMonederoInfo && (
-              <Card style={styles.validatedCard} colorScheme={colorScheme}>
-                <View style={styles.topBorder} />
-                <CardContent style={styles.cardContent}>
-                  <Text style={[styles.validatedText, { color: textColor }]}>
-                    Titular: {sinpeMovilMonederoInfo.titular || 'N/A'}
-                  </Text>
-                </CardContent>
-              </Card>
-            )}
           </View>
         )}
       </>
@@ -958,38 +805,6 @@ export default function AccountSelectionStep({
           disabled={isLoadingAccounts}
           label="Cuenta Origen"
         />
-        {selectedSourceAccount && (
-          <Card style={styles.infoCard} colorScheme={colorScheme}>
-            <View style={styles.topBorder} />
-            <CardContent style={styles.cardContent}>
-              <View style={styles.balanceSection}>
-                <Text style={[styles.balanceLabel, { color: secondaryTextColor }]}>
-                  Saldo disponible:
-                </Text>
-                <Text style={[styles.balanceText, { color: '#a61612' }]}>
-                  {formatCurrency(
-                    selectedSourceAccount.saldo,
-                    selectedSourceAccount.moneda || 'CRC'
-                  )}
-                </Text>
-              </View>
-              {(selectedSourceAccount.moneda || selectedSourceAccount.alias) && (
-                <View style={styles.accountDetails}>
-                  {selectedSourceAccount.moneda && (
-                    <Text style={[styles.infoLabel, { color: secondaryTextColor }]}>
-                      Moneda: {selectedSourceAccount.moneda}
-                    </Text>
-                  )}
-                  {selectedSourceAccount.alias && (
-                    <Text style={[styles.infoLabel, { color: secondaryTextColor }]}>
-                      Alias: {selectedSourceAccount.alias}
-                    </Text>
-                  )}
-                </View>
-              )}
-            </CardContent>
-          </Card>
-        )}
       </View>
 
       {/* Destination Account Section */}
@@ -1170,7 +985,7 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -1230,6 +1045,11 @@ const styles = StyleSheet.create({
   },
   dropdownItemSubtext: {
     fontSize: 14,
+  },
+  dropdownItemFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   emptyContainer: {
     padding: 40,
