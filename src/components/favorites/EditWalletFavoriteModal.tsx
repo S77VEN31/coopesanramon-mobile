@@ -274,6 +274,7 @@ export default function EditWalletFavoriteModal() {
             steps={wizardSteps}
             onComplete={handleWizardComplete}
             onCancel={handleClose}
+            compactFooter
           />
         </View>
       </View>

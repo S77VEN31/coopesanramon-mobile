@@ -1,8 +1,10 @@
-import React from 'react';
-import { View, Text, StyleSheet, useColorScheme } from 'react-native';
-import { Mail, DollarSign, FileText, X } from 'lucide-react-native';
+import React, { useRef } from 'react';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
+import { Mail, DollarSign, X, Wallet, Clock, Clock3, Info } from 'lucide-react-native';
+import { ColonIcon } from '../../ui/ColonIcon';
 import { Input } from '../../ui/Input';
-import { getSecondaryTextColor } from '../../../../App';
+import InfoCard from '../../cards/InfoCard';
+import { getTextColor, getSecondaryTextColor } from '../../../../App';
 import { formatCurrency } from '../../../lib/utils/format.utils';
 import type { DtoCuenta } from '../../../services/api/accounts.api';
 
@@ -21,6 +23,9 @@ interface TransferDetailsStepProps {
   onEmailChange: (value: string) => void;
   emailError: string | null;
   isEmailRequired?: boolean;
+  sinpeTransferType?: 'pagos-inmediatos' | 'creditos-directos' | 'debitos-tiempo-real' | null;
+  onSinpeTransferTypeChange?: (value: 'pagos-inmediatos' | 'creditos-directos') => void;
+  sinpeFlowType?: 'enviar-fondos' | 'recibir-fondos';
 }
 
 export default function TransferDetailsStep({
@@ -35,11 +40,17 @@ export default function TransferDetailsStep({
   onEmailChange,
   emailError,
   isEmailRequired = false,
+  sinpeTransferType,
+  onSinpeTransferTypeChange,
+  sinpeFlowType,
 }: TransferDetailsStepProps) {
   const colorScheme = useColorScheme();
   const iconColor = getSecondaryTextColor(colorScheme);
 
-  const currencySymbol = sourceAccount?.moneda === 'USD' ? '$' : '₡';
+  const descriptionRef = useRef<TextInput>(null);
+  const emailRef = useRef<TextInput>(null);
+
+  const isUSD = sourceAccount?.moneda === 'USD';
   const amountNum = parseFloat(amount) || 0;
   const exceedsBalance = sourceAccount && amountNum > sourceAccount.saldo;
   const availableBalance = sourceAccount?.saldo || 0;
@@ -55,43 +66,20 @@ export default function TransferDetailsStep({
     return undefined;
   };
 
-  const getDescriptionError = (): string | undefined => {
-    if (
-      !isSinpeMovil &&
-      description.trim().length > 0 &&
-      description.trim().length < descriptionMinLength
-    ) {
-      return `La descripción debe tener al menos ${descriptionMinLength} caracteres`;
-    }
-    return undefined;
-  };
-
-  const showAmountPreview = amount && !amountError && !exceedsBalance;
 
   return (
     <View style={styles.container}>
-      {/* Balance & preview info */}
+      {/* Balance info */}
       {sourceAccount && (
-        <View style={styles.infoBox}>
-          <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: iconColor }]}>
-              Saldo disponible:
-            </Text>
-            <Text style={styles.infoValue}>
-              {formatCurrency(availableBalance, currency)}
-            </Text>
-          </View>
-          {showAmountPreview && (
-            <View style={styles.infoRow}>
-              <Text style={[styles.infoLabel, { color: iconColor }]}>
-                Monto a transferir:
-              </Text>
-              <Text style={styles.infoValue}>
-                {formatCurrency(amountNum, currency)}
-              </Text>
-            </View>
-          )}
-        </View>
+        <InfoCard
+          items={[
+            {
+              icon: <Wallet />,
+              label: 'Saldo disponible',
+              value: formatCurrency(availableBalance, currency),
+            },
+          ]}
+        />
       )}
 
       {/* Amount */}
@@ -102,10 +90,12 @@ export default function TransferDetailsStep({
         onChangeText={onAmountChange}
         keyboardType="numeric"
         autoFocus
+        returnKeyType="next"
+        onSubmitEditing={() => descriptionRef.current?.focus()}
         leftIcon={
-          <Text style={[styles.currencyIcon, { color: iconColor }]}>
-            {currencySymbol}
-          </Text>
+          isUSD
+            ? <DollarSign size={16} color={iconColor} />
+            : <ColonIcon size={16} color={iconColor} strokeWidth={2} />
         }
         rightIcon={amount ? <X size={18} color={iconColor} /> : undefined}
         onRightIconPress={() => onAmountChange('')}
@@ -114,106 +104,136 @@ export default function TransferDetailsStep({
       />
 
       {/* Description */}
-      <Input
-        label={isSinpeMovil ? 'Descripción' : 'Descripción *'}
-        placeholder={
-          isSinpeMovil
-            ? 'Descripción (opcional)'
-            : 'Ej: Pago de servicios, Transferencia personal, etc.'
-        }
-        value={description}
-        onChangeText={onDescriptionChange}
-        multiline
-        numberOfLines={isSinpeMovil ? 3 : 4}
-        maxLength={descriptionMaxLength}
-        leftIcon={<FileText size={16} color={iconColor} />}
-        rightIcon={description ? <X size={18} color={iconColor} /> : undefined}
-        onRightIconPress={() => onDescriptionChange('')}
-        error={getDescriptionError()}
-        colorScheme={colorScheme}
-      />
-
-      {/* Description footer */}
-      <View style={styles.descriptionFooter}>
-        {!isSinpeMovil && (
+      <View>
+        <Input
+          ref={descriptionRef}
+          label="Descripción"
+          required={!isSinpeMovil}
+          placeholder={
+            isSinpeMovil
+              ? 'Descripción (opcional)'
+              : 'Ej: Pago de servicios, Transferencia personal, etc.'
+          }
+          value={description}
+          onChangeText={onDescriptionChange}
+          multiline
+          numberOfLines={isSinpeMovil ? 3 : 4}
+          maxLength={descriptionMaxLength}
+          rightIcon={description ? <X size={18} color={iconColor} /> : undefined}
+          onRightIconPress={() => onDescriptionChange('')}
+          colorScheme={colorScheme}
+        />
+        <View style={styles.descriptionFooter}>
+          {!isSinpeMovil && (
+            <Text
+              style={[
+                styles.helperText,
+                {
+                  color:
+                    description.trim().length < descriptionMinLength &&
+                    description.length > 0
+                      ? '#dc2626'
+                      : iconColor,
+                },
+              ]}
+            >
+              Mínimo {descriptionMinLength} caracteres
+            </Text>
+          )}
           <Text
             style={[
-              styles.helperText,
+              styles.counter,
               {
                 color:
-                  description.trim().length < descriptionMinLength &&
-                  description.length > 0
+                  description.length > descriptionMaxLength
                     ? '#dc2626'
                     : iconColor,
               },
             ]}
           >
-            Mínimo {descriptionMinLength} caracteres
+            {description.length}/{descriptionMaxLength}
           </Text>
-        )}
-        <Text
-          style={[
-            styles.counter,
-            {
-              color:
-                description.length > descriptionMaxLength
-                  ? '#dc2626'
-                  : iconColor,
-            },
-          ]}
-        >
-          {description.length}/{descriptionMaxLength}
-        </Text>
+        </View>
       </View>
 
       {/* Email */}
       <Input
+        ref={emailRef}
         label={isEmailRequired ? 'Correo Electrónico *' : 'Correo Electrónico'}
         placeholder="ejemplo@correo.com"
         value={email}
         onChangeText={onEmailChange}
         keyboardType="email-address"
         autoCapitalize="none"
+        returnKeyType="done"
         leftIcon={<Mail size={16} color={iconColor} />}
         rightIcon={email ? <X size={18} color={iconColor} /> : undefined}
         onRightIconPress={() => onEmailChange('')}
         error={emailError || undefined}
         colorScheme={colorScheme}
       />
+
+      {/* Execution type tabs (SINPE enviar-fondos only) */}
+      {transferType === 'sinpe' && sinpeFlowType === 'enviar-fondos' && onSinpeTransferTypeChange && (
+        <View style={styles.executionTypeSection}>
+          <Text style={[styles.inputLabel, { color: getTextColor(colorScheme) }]}>
+            Tipo de ejecución
+          </Text>
+          <View style={styles.tabsContainer}>
+            <TouchableOpacity
+              style={[styles.tab, sinpeTransferType === 'pagos-inmediatos' && styles.tabActive]}
+              onPress={() => onSinpeTransferTypeChange('pagos-inmediatos')}
+            >
+              <Clock size={16} color={sinpeTransferType === 'pagos-inmediatos' ? '#a61612' : iconColor} />
+              <Text style={[styles.tabText, { color: sinpeTransferType === 'pagos-inmediatos' ? '#a61612' : iconColor }]}>
+                Tiempo real
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, sinpeTransferType === 'creditos-directos' && styles.tabActive]}
+              onPress={() => onSinpeTransferTypeChange('creditos-directos')}
+            >
+              <Clock3 size={16} color={sinpeTransferType === 'creditos-directos' ? '#a61612' : iconColor} />
+              <Text style={[styles.tabText, { color: sinpeTransferType === 'creditos-directos' ? '#a61612' : iconColor }]}>
+                Diferido
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <InfoCard
+            items={
+              sinpeTransferType === 'pagos-inmediatos'
+                ? [
+                    {
+                      icon: <Info />,
+                      label: 'Pagos inmediatos',
+                      value: 'La transferencia se ejecuta en tiempo real y los fondos se acreditan de forma inmediata.',
+                    },
+                  ]
+                : [
+                    {
+                      icon: <Info />,
+                      label: 'Créditos directos',
+                      value: 'La transferencia se procesa de forma diferida. Los fondos se acreditan en el próximo ciclo de compensación.',
+                    },
+                  ]
+            }
+          />
+        </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    gap: 16,
-  },
-  infoBox: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: 'rgba(166, 22, 18, 0.05)',
-  },
-  infoLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  infoValue: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#a61612',
-  },
-  currencyIcon: {
-    fontSize: 16,
-    fontWeight: '700',
+    gap: 12,
+    paddingBottom: 16,
   },
   descriptionFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: -8,
+    marginTop: 4,
   },
   helperText: {
     fontSize: 12,
@@ -227,5 +247,37 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
     flex: 1,
+  },
+  executionTypeSection: {
+    gap: 12,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 6,
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 6,
+    borderBottomWidth: 0,
+    borderBottomColor: 'transparent',
+  },
+  tabActive: {
+    borderBottomColor: '#a61612',
+    borderBottomWidth: 2,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

@@ -280,6 +280,7 @@ export default function EditLocalFavoriteModal() {
             steps={wizardSteps}
             onComplete={handleWizardComplete}
             onCancel={handleClose}
+            compactFooter
           />
         </View>
       </View>

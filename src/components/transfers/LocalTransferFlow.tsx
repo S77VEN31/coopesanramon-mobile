@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { View, StyleSheet, useColorScheme } from 'react-native';
 import TransferWizard from '@/components/wizard/TransferWizard';
-import { TransferDetailsStep, ConfirmationStep, TwoFactorStep } from '@/components/wizard/steps';
+import { TransferDetailsStep, ConfirmationStep, TwoFactorStep, TransferSuccessStep } from '@/components/wizard/steps';
 import MessageCard from '@/components/cards/MessageCard';
 import { AccountSelect } from '@/components/inputs/AccountSelect';
 import LocalDestinationSection from './steps/LocalDestinationSection';
@@ -54,6 +54,9 @@ export default function LocalTransferFlow({ onComplete, onCancel }: LocalTransfe
   const [has2FAStepBeenInitialized, setHas2FAStepBeenInitialized] = useState(false);
   const [operationComplete, setOperationComplete] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [transferError, setTransferError] = useState<string | null>(null);
+  const [completedTransfer, setCompletedTransfer] = useState<EnviarTransferenciaInternaResponse | null>(null);
+  const [completedEmailDestino, setCompletedEmailDestino] = useState<string | null>(null);
 
   const localTransfer = useLocalTransfer(selectedSourceAccount, 'local');
 
@@ -179,6 +182,23 @@ export default function LocalTransferFlow({ onComplete, onCancel }: LocalTransfe
     });
   }, [has2FAStepBeenInitialized, currentChallenge, isCreatingChallenge]);
 
+  // Auto-execute transfer when no 2FA challenges are required
+  const autoExecutedRef = useRef(false);
+  useEffect(() => {
+    if (!currentChallenge || autoExecutedRef.current || operationComplete) return;
+
+    const hasRequiredChallenges = currentChallenge.retosSolicitados !== null &&
+      currentChallenge.retosSolicitados !== undefined &&
+      currentChallenge.retosSolicitados.length > 0;
+
+    if (!hasRequiredChallenges) {
+      autoExecutedRef.current = true;
+      console.log('[LocalTransfer] No 2FA required, auto-executing transfer');
+      setIsProcessing(true);
+      executeTransfer(undefined);
+    }
+  }, [currentChallenge, operationComplete]);
+
   const handleRetryChallenge = () => {
     setOtpCode('');
     setEmailCode('');
@@ -189,7 +209,11 @@ export default function LocalTransferFlow({ onComplete, onCancel }: LocalTransfe
   };
 
   const executeTransfer = async (idDesafio?: string) => {
-    if (!selectedSourceAccount) return;
+    console.log('[LocalTransfer] executeTransfer called, idDesafio:', idDesafio);
+    if (!selectedSourceAccount) {
+      console.log('[LocalTransfer] executeTransfer: no selectedSourceAccount, returning');
+      return;
+    }
 
     const tipoDestino = getTipoDestino();
     const sourceAccountNumber = selectedSourceAccount.numeroCuentaIban || selectedSourceAccount.numeroCuenta || '';
@@ -204,52 +228,82 @@ export default function LocalTransferFlow({ onComplete, onCancel }: LocalTransfe
       destinationAccountNumber = localTransfer.selectedFavoriteAccount.numeroCuenta || undefined;
     }
 
-    const result = await sendTransfer(
-      tipoDestino,
-      sourceAccountNumber,
-      parsedAmount,
-      localTransfer.description || undefined,
-      localTransfer.email || undefined,
-      idDesafio,
-      localTransfer.destinationType === 'favorites' && localTransfer.selectedFavoriteAccount ? localTransfer.selectedFavoriteAccount.id : undefined,
-      destinationAccountNumber
-    );
+    console.log('[LocalTransfer] executeTransfer: calling sendTransfer', { tipoDestino, sourceAccountNumber, parsedAmount, destinationAccountNumber });
 
-    if (result.success && result.response) {
-      setIsProcessing(false);
-      setOperationComplete(true);
-      loadAccounts();
-      onComplete(result.response, localTransfer.email || null);
-    } else {
+    try {
+      const result = await sendTransfer(
+        tipoDestino,
+        sourceAccountNumber,
+        parsedAmount,
+        localTransfer.description || undefined,
+        localTransfer.email || undefined,
+        idDesafio,
+        localTransfer.destinationType === 'favorites' && localTransfer.selectedFavoriteAccount ? localTransfer.selectedFavoriteAccount.id : undefined,
+        destinationAccountNumber
+      );
+
+      console.log('[LocalTransfer] sendTransfer result:', { success: result.success, hasResponse: !!result.response });
+
+      if (result.success && result.response) {
+        setIsProcessing(false);
+        setOperationComplete(true);
+        setCompletedTransfer(result.response);
+        setCompletedEmailDestino(localTransfer.email || null);
+        loadAccounts();
+      } else {
+        setIsProcessing(false);
+      }
+    } catch (error) {
+      console.log('[LocalTransfer] executeTransfer error:', error);
+      setTransferError(error instanceof Error ? error.message : 'Error al enviar la transferencia');
       setIsProcessing(false);
     }
   };
 
   const handleWizardComplete = async () => {
-    if (!currentChallenge) return;
-
-    setIsProcessing(true);
-
-    const hasRequiredChallenges = currentChallenge?.retosSolicitados !== null && currentChallenge?.retosSolicitados !== undefined && currentChallenge.retosSolicitados.length > 0;
-
-    if (!hasRequiredChallenges) {
-      await executeTransfer(currentChallenge?.idDesafioPublico || undefined);
+    console.log('[LocalTransfer] handleWizardComplete called');
+    console.log('[LocalTransfer] currentChallenge:', JSON.stringify(currentChallenge, null, 2));
+    if (!currentChallenge) {
+      console.log('[LocalTransfer] handleWizardComplete: no currentChallenge, returning');
       return;
     }
 
-    const finalOtp = requiresOtp(currentChallenge?.retosSolicitados || null) ? otpCode : undefined;
-    const finalEmail = requiresEmail(currentChallenge?.retosSolicitados || null) ? emailCode : undefined;
+    setIsProcessing(true);
 
-    const isValid = await validatedesafio(finalOtp, finalEmail);
+    try {
+      const hasRequiredChallenges = currentChallenge?.retosSolicitados !== null && currentChallenge?.retosSolicitados !== undefined && currentChallenge.retosSolicitados.length > 0;
+      console.log('[LocalTransfer] hasRequiredChallenges:', hasRequiredChallenges, 'retosSolicitados:', currentChallenge?.retosSolicitados);
 
-    if (isValid) {
-      await executeTransfer(currentChallenge?.idDesafioPublico || undefined);
-    } else {
+      if (!hasRequiredChallenges) {
+        console.log('[LocalTransfer] No 2FA required, executing transfer directly');
+        await executeTransfer(currentChallenge?.idDesafioPublico || undefined);
+        return;
+      }
+
+      const finalOtp = requiresOtp(currentChallenge?.retosSolicitados || null) ? otpCode : undefined;
+      const finalEmail = requiresEmail(currentChallenge?.retosSolicitados || null) ? emailCode : undefined;
+      console.log('[LocalTransfer] Validating 2FA, otpCode length:', otpCode.length, 'emailCode length:', emailCode.length);
+
+      const isValid = await validatedesafio(finalOtp, finalEmail);
+      console.log('[LocalTransfer] validatedesafio result:', isValid);
+
+      if (isValid) {
+        console.log('[LocalTransfer] 2FA valid, executing transfer');
+        await executeTransfer(currentChallenge?.idDesafioPublico || undefined);
+      } else {
+        console.log('[LocalTransfer] 2FA invalid');
+        setIsProcessing(false);
+      }
+    } catch (error) {
+      console.log('[LocalTransfer] handleWizardComplete error:', error);
+      setTransferError(error instanceof Error ? error.message : 'Error al procesar la operación');
       setIsProcessing(false);
     }
   };
 
   const handleCancel = () => {
+    autoExecutedRef.current = false;
+    setTransferError(null);
     localTransfer.resetForm();
     resetTransferState();
     reset2FAState();
@@ -347,13 +401,19 @@ export default function LocalTransferFlow({ onComplete, onCancel }: LocalTransfe
     },
     {
       id: 'verification',
-      title: 'Verificacion de Seguridad',
+      title: operationComplete ? 'Transferencia Completada' : 'Verificacion de Seguridad',
       component: (
-        <View style={styles.verificationContent}>
-          {operationComplete ? (
+        <View style={operationComplete ? styles.stepContent : styles.verificationContent}>
+          {operationComplete && completedTransfer ? (
+            <TransferSuccessStep
+              transfer={completedTransfer}
+              emailDestino={completedEmailDestino}
+            />
+          ) : transferError ? (
             <MessageCard
-              type="success"
-              message="Transferencia realizada exitosamente"
+              type="error"
+              message="Error en la Transferencia"
+              description={transferError}
               style={[styles.messageCard, { borderColor, backgroundColor: getCardBgColor(colorScheme) }]}
             />
           ) : isProcessing ? (
@@ -388,11 +448,16 @@ export default function LocalTransferFlow({ onComplete, onCancel }: LocalTransfe
           setHas2FAStepBeenInitialized(true);
         }
       },
-      hideNavigation: () => isProcessing || operationComplete,
+      hideNavigation: () => isProcessing,
       fallbackButton: {
         label: 'Cerrar',
-        onPress: handleCancel,
-        show: () => operationComplete,
+        onPress: () => {
+          if (operationComplete && completedTransfer) {
+            onComplete(completedTransfer, completedEmailDestino);
+          }
+          handleCancel();
+        },
+        show: () => operationComplete || !!transferError,
       },
       canGoNext: (): boolean => {
         if (operationComplete) return false;
@@ -421,7 +486,8 @@ export default function LocalTransferFlow({ onComplete, onCancel }: LocalTransfe
     favoriteAccounts, isLoadingFavorites,
     currentChallenge, isCreatingChallenge, isValidating, isExecutingOperation,
     validationError, operationError, remainingAttempts, timeRemaining,
-    otpCode, emailCode, operationComplete, isProcessing, colorScheme, borderColor,
+    otpCode, emailCode, operationComplete, isProcessing, transferError,
+    completedTransfer, completedEmailDestino, colorScheme, borderColor,
   ]);
 
   return (
@@ -438,7 +504,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   section: {
-    marginBottom: 12,
+    marginBottom: 20,
   },
   verificationContent: {
     paddingHorizontal: 4,

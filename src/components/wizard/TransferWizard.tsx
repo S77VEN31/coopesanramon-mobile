@@ -25,9 +25,10 @@ interface TransferWizardProps {
   steps: WizardStep[];
   onComplete: () => void;
   onCancel?: () => void;
+  compactFooter?: boolean;
 }
 
-export default function TransferWizard({ steps, onComplete, onCancel }: TransferWizardProps) {
+export default function TransferWizard({ steps, onComplete, onCancel, compactFooter = false }: TransferWizardProps) {
   const colorScheme = useColorScheme();
   const textColor = getTextColor(colorScheme);
   const secondaryTextColor = getSecondaryTextColor(colorScheme);
@@ -45,7 +46,9 @@ export default function TransferWizard({ steps, onComplete, onCancel }: Transfer
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
+      const nextStep = currentStep + 1;
+      setCurrentStep(nextStep);
+      steps[nextStep].onEnter?.();
     } else {
       onComplete();
     }
@@ -89,11 +92,14 @@ export default function TransferWizard({ steps, onComplete, onCancel }: Transfer
       </KeyboardAwareScrollView>
 
       {/* Navigation Buttons */}
-      {currentStepData.hideNavigation?.() ? null : <View style={styles.navigationContainer}>
+      {currentStepData.hideNavigation?.() ? null : <View style={[
+        compactFooter ? styles.compactNavigationContainer : styles.navigationContainer,
+        compactFooter && { borderTopColor: borderColor },
+      ]}>
         {currentStep > 0 && !(!canGoNext() && currentStepData.fallbackButton?.show()) && (
           <Button
             variant="outline"
-            size="sm"
+            size={compactFooter ? 'sm' : 'default'}
             onPress={handlePrevious}
             style={styles.navButton}
           >
@@ -103,7 +109,7 @@ export default function TransferWizard({ steps, onComplete, onCancel }: Transfer
         {!canGoNext() && currentStepData.fallbackButton?.show() ? (
           <Button
             variant="outline"
-            size="sm"
+            size={compactFooter ? 'sm' : 'default'}
             onPress={currentStepData.fallbackButton.onPress}
             style={[styles.navButton, currentStepData.fallbackButton.style]}
           >
@@ -112,7 +118,7 @@ export default function TransferWizard({ steps, onComplete, onCancel }: Transfer
         ) : (
           <Button
             variant="default"
-            size="sm"
+            size={compactFooter ? 'sm' : 'default'}
             onPress={handleNext}
             disabled={!canGoNext()}
             style={styles.navButton}
@@ -145,14 +151,19 @@ const styles = StyleSheet.create({
   },
   contentContainerContent: {
     flexGrow: 1,
+    paddingTop: 8,
   },
   navigationContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
     gap: 8,
+  },
+  compactNavigationContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.1)',
+    flexShrink: 0,
   },
   navButton: {
     flex: 1,

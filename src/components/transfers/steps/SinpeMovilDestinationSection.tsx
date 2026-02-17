@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
 import { Phone, Star, Hash } from 'lucide-react-native';
-import { Input } from '@/components/ui/Input';
+import { MaskedInput } from '@/components/ui/MaskedInput';
+import { PHONE_MASK } from '@/constants/input-masks';
 import { FavoriteAccountSelect } from '@/components/inputs/FavoriteAccountSelect';
 import { getTextColor, getSecondaryTextColor } from '../../../../App';
 import type { MonederoFavoritoItem } from '@/services/api/favorites.api';
@@ -34,6 +35,18 @@ export default function SinpeMovilDestinationSection({
   const colorScheme = useColorScheme();
   const textColor = getTextColor(colorScheme);
   const secondaryTextColor = getSecondaryTextColor(colorScheme);
+  const [maskedPhone, setMaskedPhone] = useState('');
+
+  useEffect(() => {
+    if (!sinpeMovilPhoneNumber) {
+      setMaskedPhone('');
+    }
+  }, [sinpeMovilPhoneNumber]);
+
+  const handlePhoneChange = (masked: string, unmasked: string) => {
+    setMaskedPhone(masked);
+    onSinpeMovilPhoneChange(unmasked);
+  };
 
   return (
     <>
@@ -69,6 +82,7 @@ export default function SinpeMovilDestinationSection({
             items={sinpeMovilFavoriteWallets}
             value={selectedSinpeMovilFavoriteWallet}
             onSelect={onSinpeMovilFavoriteSelect}
+            label="Monedero Favorito"
             placeholder="Seleccionar monedero favorito"
             disabled={isLoadingFavorites || sinpeMovilFavoriteWallets.length === 0}
             modalTitle="Seleccionar Monedero Favorito"
@@ -85,16 +99,17 @@ export default function SinpeMovilDestinationSection({
 
       {sinpeMovilDestinationType === 'manual' && (
         <View style={styles.field}>
-          <Text style={[styles.label, { color: textColor }]}>
-            Numero de Telefono
-          </Text>
-          <Input
-            placeholder="12345678"
-            value={sinpeMovilPhoneNumber}
-            onChangeText={onSinpeMovilPhoneChange}
+          <MaskedInput
+            label="Numero de Telefono"
+            placeholder="8888-7777"
+            value={maskedPhone}
+            onChangeText={handlePhoneChange}
+            mask={PHONE_MASK}
+            maxLength={9}
             keyboardType="phone-pad"
             error={sinpeMovilMonederoError || undefined}
             leftIcon={<Phone size={16} color={secondaryTextColor} />}
+            colorScheme={colorScheme}
           />
         </View>
       )}
@@ -110,13 +125,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     marginBottom: 8,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginBottom: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   tabsContainer: {
     flexDirection: 'row',

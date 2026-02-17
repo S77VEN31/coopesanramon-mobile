@@ -1,9 +1,10 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { View, StyleSheet, useColorScheme } from 'react-native';
 import TransferWizard from '@/components/wizard/TransferWizard';
-import { TransferDetailsStep, ConfirmationStep, TwoFactorStep } from '@/components/wizard/steps';
+import { TransferDetailsStep, ConfirmationStep, TwoFactorStep, TransferSuccessStep } from '@/components/wizard/steps';
 import MessageCard from '@/components/cards/MessageCard';
 import { AccountSelect } from '@/components/inputs/AccountSelect';
+import SinpeOperationSection from './steps/SinpeOperationSection';
 import SinpeDestinationSection from './steps/SinpeDestinationSection';
 import { useSinpeTransfer, type CuentaSinpeFavoritaItem } from '@/hooks/use-sinpe-transfer';
 import { useAccountsStore } from '@/lib/states/accounts.store';
@@ -64,6 +65,9 @@ export default function SinpeTransferFlow({ onComplete, onCancel }: SinpeTransfe
   const [has2FAStepBeenInitialized, setHas2FAStepBeenInitialized] = useState(false);
   const [operationComplete, setOperationComplete] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [transferError, setTransferError] = useState<string | null>(null);
+  const [completedTransfer, setCompletedTransfer] = useState<SinpeTransferResponse | null>(null);
+  const [completedEmailDestino, setCompletedEmailDestino] = useState<string | null>(null);
 
   const sinpeTransfer = useSinpeTransfer(selectedSourceAccount, 'sinpe', sinpeTransferType ?? undefined);
 
@@ -176,6 +180,23 @@ export default function SinpeTransferFlow({ onComplete, onCancel }: SinpeTransfe
     });
   }, [has2FAStepBeenInitialized, currentChallenge, isCreatingChallenge]);
 
+  // Auto-execute transfer when no 2FA challenges are required
+  const autoExecutedRef = useRef(false);
+  useEffect(() => {
+    if (!currentChallenge || autoExecutedRef.current || operationComplete) return;
+
+    const hasRequiredChallenges = currentChallenge.retosSolicitados !== null &&
+      currentChallenge.retosSolicitados !== undefined &&
+      currentChallenge.retosSolicitados.length > 0;
+
+    if (!hasRequiredChallenges) {
+      autoExecutedRef.current = true;
+      console.log('[SinpeTransfer] No 2FA required, auto-executing transfer');
+      setIsProcessing(true);
+      executeTransfer(undefined);
+    }
+  }, [currentChallenge, operationComplete]);
+
   const handleRetryChallenge = () => {
     setOtpCode('');
     setEmailCode('');
@@ -209,21 +230,27 @@ export default function SinpeTransferFlow({ onComplete, onCancel }: SinpeTransfe
       destinationAccountNumber,
     ] as const;
 
-    let result;
-    if (sinpeTransferType === 'creditos-directos') {
-      result = await sendtransferenciaCreditosDirectos(...args);
-    } else if (sinpeTransferType === 'debitos-tiempo-real') {
-      result = await sendtransferenciaDebitosTiempoReal(...args);
-    } else {
-      result = await sendtransferenciaSinpe(...args);
-    }
+    try {
+      let result;
+      if (sinpeTransferType === 'creditos-directos') {
+        result = await sendtransferenciaCreditosDirectos(...args);
+      } else if (sinpeTransferType === 'debitos-tiempo-real') {
+        result = await sendtransferenciaDebitosTiempoReal(...args);
+      } else {
+        result = await sendtransferenciaSinpe(...args);
+      }
 
-    if (result.success && result.response) {
-      setIsProcessing(false);
-      setOperationComplete(true);
-      loadAccounts();
-      onComplete(result.response, sinpeTransfer.sinpeEmail || null);
-    } else {
+      if (result.success && result.response) {
+        setIsProcessing(false);
+        setOperationComplete(true);
+        setCompletedTransfer(result.response);
+        setCompletedEmailDestino(sinpeTransfer.sinpeEmail || null);
+        loadAccounts();
+      } else {
+        setIsProcessing(false);
+      }
+    } catch (error) {
+      setTransferError(error instanceof Error ? error.message : 'Error al enviar la transferencia');
       setIsProcessing(false);
     }
   };
@@ -233,26 +260,33 @@ export default function SinpeTransferFlow({ onComplete, onCancel }: SinpeTransfe
 
     setIsProcessing(true);
 
-    const hasRequiredChallenges = currentChallenge?.retosSolicitados !== null && currentChallenge?.retosSolicitados !== undefined && currentChallenge.retosSolicitados.length > 0;
+    try {
+      const hasRequiredChallenges = currentChallenge?.retosSolicitados !== null && currentChallenge?.retosSolicitados !== undefined && currentChallenge.retosSolicitados.length > 0;
 
-    if (!hasRequiredChallenges) {
-      await executeTransfer(currentChallenge?.idDesafioPublico || undefined);
-      return;
-    }
+      if (!hasRequiredChallenges) {
+        await executeTransfer(currentChallenge?.idDesafioPublico || undefined);
+        return;
+      }
 
-    const finalOtp = requiresOtp(currentChallenge?.retosSolicitados || null) ? otpCode : undefined;
-    const finalEmail = requiresEmail(currentChallenge?.retosSolicitados || null) ? emailCode : undefined;
+      const finalOtp = requiresOtp(currentChallenge?.retosSolicitados || null) ? otpCode : undefined;
+      const finalEmail = requiresEmail(currentChallenge?.retosSolicitados || null) ? emailCode : undefined;
 
-    const isValid = await validatedesafio(finalOtp, finalEmail);
+      const isValid = await validatedesafio(finalOtp, finalEmail);
 
-    if (isValid) {
-      await executeTransfer(currentChallenge?.idDesafioPublico || undefined);
-    } else {
+      if (isValid) {
+        await executeTransfer(currentChallenge?.idDesafioPublico || undefined);
+      } else {
+        setIsProcessing(false);
+      }
+    } catch (error) {
+      setTransferError(error instanceof Error ? error.message : 'Error al procesar la operación');
       setIsProcessing(false);
     }
   };
 
   const handleCancel = () => {
+    autoExecutedRef.current = false;
+    setTransferError(null);
     sinpeTransfer.resetForm();
     resetSinpeTransferState();
     reset2FAState();
@@ -266,6 +300,10 @@ export default function SinpeTransferFlow({ onComplete, onCancel }: SinpeTransfe
       title: 'Cuentas',
       component: (
         <View style={styles.stepContent}>
+          <SinpeOperationSection
+            sinpeFlowType={sinpeFlowType}
+            onSinpeFlowTypeChange={handleSinpeFlowTypeChange}
+          />
           <View style={styles.section}>
             <AccountSelect
               accounts={userAccounts}
@@ -280,9 +318,6 @@ export default function SinpeTransferFlow({ onComplete, onCancel }: SinpeTransfe
             <View style={styles.section}>
               <SinpeDestinationSection
                 sinpeFlowType={sinpeFlowType}
-                onSinpeFlowTypeChange={handleSinpeFlowTypeChange}
-                sinpeTransferType={sinpeTransferType}
-                onSinpeTransferTypeChange={setSinpeTransferType}
                 sinpeDestinationType={sinpeTransfer.sinpeDestinationType}
                 onSinpeDestinationTypeChange={sinpeTransfer.setSinpeDestinationType}
                 selectedSinpeFavoriteAccount={sinpeTransfer.selectedSinpeFavoriteAccount}
@@ -318,6 +353,9 @@ export default function SinpeTransferFlow({ onComplete, onCancel }: SinpeTransfe
           onEmailChange={sinpeTransfer.setSinpeEmail}
           emailError={sinpeTransfer.sinpeEmailError}
           isEmailRequired={false}
+          sinpeTransferType={sinpeTransferType}
+          onSinpeTransferTypeChange={setSinpeTransferType}
+          sinpeFlowType={sinpeFlowType}
         />
       ),
       canGoNext: (): boolean => isTransferDetailsValid(),
@@ -351,13 +389,19 @@ export default function SinpeTransferFlow({ onComplete, onCancel }: SinpeTransfe
     },
     {
       id: 'verification',
-      title: 'Verificacion de Seguridad',
+      title: operationComplete ? 'Transferencia Completada' : 'Verificacion de Seguridad',
       component: (
-        <View style={styles.verificationContent}>
-          {operationComplete ? (
+        <View style={operationComplete ? styles.stepContent : styles.verificationContent}>
+          {operationComplete && completedTransfer ? (
+            <TransferSuccessStep
+              transfer={completedTransfer}
+              emailDestino={completedEmailDestino}
+            />
+          ) : transferError ? (
             <MessageCard
-              type="success"
-              message="Transferencia SINPE realizada exitosamente"
+              type="error"
+              message="Error en la Transferencia"
+              description={transferError}
               style={[styles.messageCard, { borderColor, backgroundColor: getCardBgColor(colorScheme) }]}
             />
           ) : isProcessing ? (
@@ -392,11 +436,16 @@ export default function SinpeTransferFlow({ onComplete, onCancel }: SinpeTransfe
           setHas2FAStepBeenInitialized(true);
         }
       },
-      hideNavigation: () => isProcessing || operationComplete,
+      hideNavigation: () => isProcessing,
       fallbackButton: {
         label: 'Cerrar',
-        onPress: handleCancel,
-        show: () => operationComplete,
+        onPress: () => {
+          if (operationComplete && completedTransfer) {
+            onComplete(completedTransfer, completedEmailDestino);
+          }
+          handleCancel();
+        },
+        show: () => operationComplete || !!transferError,
       },
       canGoNext: (): boolean => {
         if (operationComplete) return false;
@@ -425,7 +474,8 @@ export default function SinpeTransferFlow({ onComplete, onCancel }: SinpeTransfe
     sinpeFavoriteAccounts, isLoadingFavorites, sinpeFlowType, sinpeTransferType,
     currentChallenge, isCreatingChallenge, isValidating, isExecutingOperation,
     validationError, operationError, remainingAttempts, timeRemaining,
-    otpCode, emailCode, operationComplete, isProcessing, colorScheme, borderColor,
+    otpCode, emailCode, operationComplete, isProcessing, transferError,
+    completedTransfer, completedEmailDestino, colorScheme, borderColor,
   ]);
 
   return (
@@ -439,10 +489,10 @@ export default function SinpeTransferFlow({ onComplete, onCancel }: SinpeTransfe
 
 const styles = StyleSheet.create({
   stepContent: {
-    paddingTop: 8,
+    paddingTop: 12,
+    gap: 24,
   },
   section: {
-    marginBottom: 12,
   },
   verificationContent: {
     paddingHorizontal: 4,

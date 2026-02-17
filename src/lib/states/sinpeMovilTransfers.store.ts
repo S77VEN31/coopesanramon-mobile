@@ -3,11 +3,10 @@ import { devtools } from 'zustand/middleware';
 import {
   sendSinpeMovilTransfer,
   validateSinpeMovilMonedero,
-  TipoDestinoTransferencia,
-  TipoOperacion,
   type EnviarSinpeMovilResponse,
   type ObtenerMonederoSinpeResponse,
 } from '../../services/api/transfers.api';
+import { TipoDestinoTransferencia, TipoOperacion } from '../../constants/enums';
 
 interface SinpeMovilTransferResult {
   success: boolean;

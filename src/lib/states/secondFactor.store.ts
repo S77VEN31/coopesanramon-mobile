@@ -62,6 +62,7 @@ export const useSecondFactorStore = create<SecondFactorState>()(
       onValidationSuccess: null,
 
       createdesafio: async (tipoOperacion: TipoOperacion, metadatos?: string) => {
+        console.log('[2FA Store] createdesafio called, tipoOperacion:', tipoOperacion);
         set({
           isCreatingChallenge: true,
           error: null,
@@ -75,7 +76,9 @@ export const useSecondFactorStore = create<SecondFactorState>()(
             codigoCanal: 'Mobile',
             direccionIpCliente: null,
           };
+          console.log('[2FA Store] createdesafio request:', JSON.stringify(requestPayload));
           const response = await createdesafio(requestPayload);
+          console.log('[2FA Store] createdesafio response:', JSON.stringify(response, null, 2));
 
           set(
             {
@@ -93,6 +96,7 @@ export const useSecondFactorStore = create<SecondFactorState>()(
 
           return response;
         } catch (err) {
+          console.log('[2FA Store] createdesafio error:', err);
           const errorMessage = err instanceof Error
             ? err.message
             : 'Error al crear el desafío';
@@ -113,8 +117,13 @@ export const useSecondFactorStore = create<SecondFactorState>()(
 
       validatedesafio: async (codigoOtp?: string, codigoEmail?: string) => {
         const { currentChallenge, remainingAttempts, onValidationSuccess } = get();
-        
+
+        console.log('[2FA Store] validatedesafio called', { codigoOtp: codigoOtp ? '***' : undefined, codigoEmail: codigoEmail ? '***' : undefined });
+        console.log('[2FA Store] currentChallenge:', currentChallenge?.idDesafioPublico);
+        console.log('[2FA Store] onValidationSuccess is set:', !!onValidationSuccess);
+
         if (!currentChallenge?.idDesafioPublico) {
+          console.log('[2FA Store] No active challenge, returning false');
           set({ validationError: 'No hay desafío activo' }, false, 'secondFactor/noActiveChallenge');
           return false;
         }
@@ -122,35 +131,41 @@ export const useSecondFactorStore = create<SecondFactorState>()(
         set({ isValidating: true, validationError: null, validationErrorRaw: null }, false, 'secondFactor/validateStart');
 
         try {
+          console.log('[2FA Store] Calling API validatedesafio...');
           const response = await validatedesafio({
             idDesafioPublico: currentChallenge.idDesafioPublico,
             codigoOtp: codigoOtp || null,
             codigoEmail: codigoEmail || null,
           });
-          
+
+          console.log('[2FA Store] API response:', { validado: response.validado, estado: response.estado });
+
           set(
-            { 
+            {
               validationResult: response,
-              isValidating: false, 
+              isValidating: false,
             },
             false,
             'secondFactor/validateResponse'
           );
 
           if (response.validado) {
+            console.log('[2FA Store] Validation SUCCESS');
             get().stopCountdown();
-            
+
             const challengeId = currentChallenge.idDesafioPublico;
             const callback = onValidationSuccess;
-            
+
             if (callback && challengeId) {
+              console.log('[2FA Store] Executing onValidationSuccess callback...');
               set({ isExecutingOperation: true, operationError: null }, false, 'secondFactor/executeOperationStart');
-              
+
               try {
                 await callback(challengeId);
-                
+                console.log('[2FA Store] onValidationSuccess callback completed');
+
                 set(
-                  { 
+                  {
                     isExecutingOperation: false,
                     operationSuccess: true,
                     operationError: null,
@@ -159,12 +174,13 @@ export const useSecondFactorStore = create<SecondFactorState>()(
                   'secondFactor/executeOperationSuccess'
                 );
               } catch (err) {
-                const errorMessage = err instanceof Error 
-                  ? err.message 
+                console.log('[2FA Store] onValidationSuccess callback error:', err);
+                const errorMessage = err instanceof Error
+                  ? err.message
                   : 'Error al procesar la operación';
-                
+
                 set(
-                  { 
+                  {
                     isExecutingOperation: false,
                     operationError: errorMessage,
                     operationSuccess: false,
@@ -173,10 +189,13 @@ export const useSecondFactorStore = create<SecondFactorState>()(
                   'secondFactor/executeOperationError'
                 );
               }
+            } else {
+              console.log('[2FA Store] No callback set, returning true only');
             }
-            
+
             return true;
           } else {
+            console.log('[2FA Store] Validation FAILED');
             const newAttempts = Math.max(0, remainingAttempts - 1);
             set(
               {
@@ -186,16 +205,17 @@ export const useSecondFactorStore = create<SecondFactorState>()(
               false,
               'secondFactor/validateFailed'
             );
-            
+
             if (newAttempts <= 0) {
               get().stopCountdown();
             }
-            
+
             return false;
           }
         } catch (err) {
+          console.log('[2FA Store] validatedesafio API error:', err);
           const newAttempts = Math.max(0, remainingAttempts - 1);
-          
+
           set(
             {
               isValidating: false,
@@ -206,11 +226,11 @@ export const useSecondFactorStore = create<SecondFactorState>()(
             false,
             'secondFactor/validateError'
           );
-          
+
           if (newAttempts <= 0) {
             get().stopCountdown();
           }
-          
+
           return false;
         }
       },

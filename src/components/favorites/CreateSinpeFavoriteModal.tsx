@@ -332,6 +332,7 @@ export default function CreateSinpeFavoriteModal() {
             steps={wizardSteps}
             onComplete={handleWizardComplete}
             onCancel={handleClose}
+            compactFooter
           />
         </View>
       </View>

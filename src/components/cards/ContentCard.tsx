@@ -14,6 +14,7 @@ interface ContentCardProps {
   fullHeight?: boolean;
   headerActions?: React.ReactNode;
   refreshControl?: React.ReactElement<RefreshControl>;
+  disableScroll?: boolean;
 }
 
 export default function ContentCard({
@@ -25,6 +26,7 @@ export default function ContentCard({
   fullHeight = false,
   headerActions,
   refreshControl,
+  disableScroll = false,
 }: ContentCardProps) {
   const colorScheme = useColorScheme();
 
@@ -53,14 +55,20 @@ export default function ContentCard({
           </View>
         </CardHeader>
       )}
-      <ScrollView
-        style={fullHeight ? styles.scrollView : undefined}
-        contentContainerStyle={[styles.content, contentClassName]}
-        showsVerticalScrollIndicator={true}
-        refreshControl={refreshControl}
-      >
-        {children}
-      </ScrollView>
+      {disableScroll ? (
+        <View style={[styles.content, fullHeight && styles.scrollView, contentClassName]}>
+          {children}
+        </View>
+      ) : (
+        <ScrollView
+          style={fullHeight ? styles.scrollView : undefined}
+          contentContainerStyle={[styles.content, contentClassName]}
+          showsVerticalScrollIndicator={true}
+          refreshControl={refreshControl}
+        >
+          {children}
+        </ScrollView>
+      )}
     </Card>
   );
 }

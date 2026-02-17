@@ -48,8 +48,8 @@ export default function LocalDestinationSection({
   const secondaryTextColor = getSecondaryTextColor(colorScheme);
 
   return (
-    <>
-      <View style={styles.field}>
+    <View style={styles.container}>
+      <View>
         <Text style={[styles.inputLabel, { color: textColor }]}>
           Cuenta Destino
         </Text>
@@ -94,62 +94,64 @@ export default function LocalDestinationSection({
       </View>
 
       {destinationType === 'favorites' && (
-        <View style={styles.field}>
-          <FavoriteAccountSelect<CuentaFavoritaInternaItem>
-            items={favoriteAccounts}
-            value={selectedFavoriteAccount}
-            onSelect={onFavoriteSelect}
-            placeholder="Seleccionar cuenta favorita"
-            disabled={isLoadingFavorites || favoriteAccounts.length === 0}
-            modalTitle="Seleccionar Cuenta Favorita"
-            emptyMessage="No hay cuentas favoritas disponibles"
-            getKey={(item) => item.id?.toString() || item.numeroCuenta || ''}
-            getDisplayText={(item) => item.numeroCuenta || ''}
-            getAlias={(item) => item.alias}
-            getTitular={(item) => item.titular}
-            formatAsIban={true}
-            icon={<CreditCard size={18} />}
-          />
-        </View>
+        <FavoriteAccountSelect<CuentaFavoritaInternaItem>
+          label="Cuenta Favorita"
+          items={favoriteAccounts}
+          value={selectedFavoriteAccount}
+          onSelect={onFavoriteSelect}
+          placeholder="Seleccionar cuenta favorita"
+          disabled={isLoadingFavorites || favoriteAccounts.length === 0}
+          modalTitle="Seleccionar Cuenta Favorita"
+          emptyMessage="No hay cuentas favoritas disponibles"
+          getKey={(item) => item.id?.toString() || item.numeroCuenta || ''}
+          getDisplayText={(item) => item.numeroCuenta || ''}
+          getAlias={(item) => item.alias}
+          getTitular={(item) => item.titular}
+          formatAsIban={true}
+          icon={<CreditCard size={18} />}
+        />
       )}
 
       {destinationType === 'own' && (
-        <View style={styles.field}>
-          <AccountSelect
-            accounts={ownAccounts}
-            value={selectedOwnAccount ? getAccountIdentifier(selectedOwnAccount) : ''}
-            onValueChange={onOwnAccountSelect}
-            placeholder="Seleccionar cuenta propia"
-            disabled={ownAccounts.length === 0}
-          />
-        </View>
+        <AccountSelect
+          label="Cuenta Propia"
+          accounts={ownAccounts}
+          value={selectedOwnAccount ? getAccountIdentifier(selectedOwnAccount) : ''}
+          onValueChange={onOwnAccountSelect}
+          placeholder="Seleccionar cuenta propia"
+          disabled={ownAccounts.length === 0}
+        />
       )}
 
       {destinationType === 'manual' && (
-        <View style={styles.field}>
-          <IbanInput
-            label="Numero de Cuenta (IBAN)"
-            placeholder="00 0000 0000 0000 0000 00"
-            value={destinationIban}
-            onChangeText={(_masked, unmasked) => onDestinationIbanChange(unmasked)}
-            onClear={() => onDestinationIbanChange('')}
-            error={destinationFormatError || accountValidationError || undefined}
-            colorScheme={colorScheme}
-          />
-        </View>
+        <IbanInput
+          label="Numero de Cuenta (IBAN)"
+          placeholder="00 0000 0000 0000 0000 00"
+          value={destinationIban}
+          onChangeText={(_masked, unmasked) => onDestinationIbanChange(unmasked)}
+          onClear={() => onDestinationIbanChange('')}
+          error={destinationFormatError || accountValidationError || undefined}
+          colorScheme={colorScheme}
+        />
       )}
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    gap: 16,
+  },
   field: {
+    marginBottom: 12,
+  },
+  tabsField: {
     marginBottom: 12,
   },
   inputLabel: {
     fontSize: 14,
     fontWeight: '500',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   label: {
     fontSize: 12,

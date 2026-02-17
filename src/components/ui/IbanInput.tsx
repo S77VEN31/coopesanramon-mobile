@@ -166,7 +166,6 @@ export const IbanInput: React.FC<IbanInputProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 14,
   },
   label: {
     fontSize: 14,

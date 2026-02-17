@@ -25,6 +25,7 @@ interface InputProps {
   numberOfLines?: number;
   textAlignVertical?: 'auto' | 'top' | 'center' | 'bottom';
   maxLength?: number;
+  required?: boolean;
 }
 
 export const Input = forwardRef<TextInput, InputProps>(({
@@ -50,6 +51,7 @@ export const Input = forwardRef<TextInput, InputProps>(({
   numberOfLines,
   textAlignVertical,
   maxLength,
+  required = false,
 }, ref) => {
   const [isFocused, setIsFocused] = useState(false);
   const textColor = getTextColor(colorScheme);
@@ -61,7 +63,7 @@ export const Input = forwardRef<TextInput, InputProps>(({
     <View style={[styles.container, style]}>
       {label && (
         <Text style={[styles.label, { color: textColor }]}>
-          {label}
+          {label}{required && <Text style={styles.requiredAsterisk}> *</Text>}
         </Text>
       )}
       <View style={styles.inputWrapper}>
@@ -106,7 +108,7 @@ export const Input = forwardRef<TextInput, InputProps>(({
         {rightIcon && (
           <TouchableOpacity
             onPress={onRightIconPress}
-            style={[styles.rightIconContainer, multiline ? styles.iconContainerMultiline : undefined]}
+            style={[styles.rightIconContainer, multiline ? styles.rightIconContainerMultiline : undefined]}
             activeOpacity={0.7}
           >
             {rightIcon}
@@ -122,7 +124,6 @@ export const Input = forwardRef<TextInput, InputProps>(({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 14,
   },
   label: {
     fontSize: 14,
@@ -167,6 +168,15 @@ const styles = StyleSheet.create({
   iconContainerMultiline: {
     top: 14,
     transform: [],
+  },
+  rightIconContainerMultiline: {
+    top: 'auto',
+    bottom: 12,
+    transform: [],
+  },
+  requiredAsterisk: {
+    color: '#dc2626',
+    fontWeight: '700',
   },
   errorText: {
     fontSize: 14,

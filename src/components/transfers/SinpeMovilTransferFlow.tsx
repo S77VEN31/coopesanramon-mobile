@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { View, StyleSheet, useColorScheme } from 'react-native';
 import TransferWizard from '@/components/wizard/TransferWizard';
-import { TransferDetailsStep, ConfirmationStep, TwoFactorStep } from '@/components/wizard/steps';
+import { TransferDetailsStep, ConfirmationStep, TwoFactorStep, TransferSuccessStep } from '@/components/wizard/steps';
 import MessageCard from '@/components/cards/MessageCard';
 import { AccountSelect } from '@/components/inputs/AccountSelect';
 import SinpeMovilDestinationSection from './steps/SinpeMovilDestinationSection';
@@ -54,6 +54,9 @@ export default function SinpeMovilTransferFlow({ onComplete, onCancel }: SinpeMo
   const [has2FAStepBeenInitialized, setHas2FAStepBeenInitialized] = useState(false);
   const [operationComplete, setOperationComplete] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [transferError, setTransferError] = useState<string | null>(null);
+  const [completedTransfer, setCompletedTransfer] = useState<EnviarSinpeMovilResponse | null>(null);
+  const [completedEmailDestino, setCompletedEmailDestino] = useState<string | null>(null);
 
   const sinpeMovilTransfer = useSinpeMovilTransfer();
 
@@ -140,6 +143,23 @@ export default function SinpeMovilTransferFlow({ onComplete, onCancel }: SinpeMo
     });
   }, [has2FAStepBeenInitialized, currentChallenge, isCreatingChallenge]);
 
+  // Auto-execute transfer when no 2FA challenges are required
+  const autoExecutedRef = useRef(false);
+  useEffect(() => {
+    if (!currentChallenge || autoExecutedRef.current || operationComplete) return;
+
+    const hasRequiredChallenges = currentChallenge.retosSolicitados !== null &&
+      currentChallenge.retosSolicitados !== undefined &&
+      currentChallenge.retosSolicitados.length > 0;
+
+    if (!hasRequiredChallenges) {
+      autoExecutedRef.current = true;
+      console.log('[SinpeMovilTransfer] No 2FA required, auto-executing transfer');
+      setIsProcessing(true);
+      executeTransfer(undefined);
+    }
+  }, [currentChallenge, operationComplete]);
+
   const handleRetryChallenge = () => {
     setOtpCode('');
     setEmailCode('');
@@ -162,23 +182,29 @@ export default function SinpeMovilTransferFlow({ onComplete, onCancel }: SinpeMo
       phoneNumberToUse = sinpeMovilTransfer.sinpeMovilPhoneNumber;
     }
 
-    const result = await sendSinpeMovilTransfer(
-      tipoDestino,
-      sourceAccountNumber,
-      phoneNumberToUse,
-      parsedAmount,
-      sinpeMovilTransfer.sinpeMovilDescription || undefined,
-      sinpeMovilTransfer.sinpeMovilEmail || undefined,
-      idDesafio,
-      sinpeMovilTransfer.sinpeMovilDestinationType === 'favorites' && sinpeMovilTransfer.selectedSinpeMovilFavoriteWallet ? sinpeMovilTransfer.selectedSinpeMovilFavoriteWallet.id : undefined
-    );
+    try {
+      const result = await sendSinpeMovilTransfer(
+        tipoDestino,
+        sourceAccountNumber,
+        phoneNumberToUse,
+        parsedAmount,
+        sinpeMovilTransfer.sinpeMovilDescription || undefined,
+        sinpeMovilTransfer.sinpeMovilEmail || undefined,
+        idDesafio,
+        sinpeMovilTransfer.sinpeMovilDestinationType === 'favorites' && sinpeMovilTransfer.selectedSinpeMovilFavoriteWallet ? sinpeMovilTransfer.selectedSinpeMovilFavoriteWallet.id : undefined
+      );
 
-    if (result.success && result.response) {
-      setIsProcessing(false);
-      setOperationComplete(true);
-      loadAccounts();
-      onComplete(result.response, sinpeMovilTransfer.sinpeMovilEmail || null);
-    } else {
+      if (result.success && result.response) {
+        setIsProcessing(false);
+        setOperationComplete(true);
+        setCompletedTransfer(result.response);
+        setCompletedEmailDestino(sinpeMovilTransfer.sinpeMovilEmail || null);
+        loadAccounts();
+      } else {
+        setIsProcessing(false);
+      }
+    } catch (error) {
+      setTransferError(error instanceof Error ? error.message : 'Error al enviar la transferencia');
       setIsProcessing(false);
     }
   };
@@ -188,26 +214,33 @@ export default function SinpeMovilTransferFlow({ onComplete, onCancel }: SinpeMo
 
     setIsProcessing(true);
 
-    const hasRequiredChallenges = currentChallenge?.retosSolicitados !== null && currentChallenge?.retosSolicitados !== undefined && currentChallenge.retosSolicitados.length > 0;
+    try {
+      const hasRequiredChallenges = currentChallenge?.retosSolicitados !== null && currentChallenge?.retosSolicitados !== undefined && currentChallenge.retosSolicitados.length > 0;
 
-    if (!hasRequiredChallenges) {
-      await executeTransfer(currentChallenge?.idDesafioPublico || undefined);
-      return;
-    }
+      if (!hasRequiredChallenges) {
+        await executeTransfer(currentChallenge?.idDesafioPublico || undefined);
+        return;
+      }
 
-    const finalOtp = requiresOtp(currentChallenge?.retosSolicitados || null) ? otpCode : undefined;
-    const finalEmail = requiresEmail(currentChallenge?.retosSolicitados || null) ? emailCode : undefined;
+      const finalOtp = requiresOtp(currentChallenge?.retosSolicitados || null) ? otpCode : undefined;
+      const finalEmail = requiresEmail(currentChallenge?.retosSolicitados || null) ? emailCode : undefined;
 
-    const isValid = await validatedesafio(finalOtp, finalEmail);
+      const isValid = await validatedesafio(finalOtp, finalEmail);
 
-    if (isValid) {
-      await executeTransfer(currentChallenge?.idDesafioPublico || undefined);
-    } else {
+      if (isValid) {
+        await executeTransfer(currentChallenge?.idDesafioPublico || undefined);
+      } else {
+        setIsProcessing(false);
+      }
+    } catch (error) {
+      setTransferError(error instanceof Error ? error.message : 'Error al procesar la operación');
       setIsProcessing(false);
     }
   };
 
   const handleCancel = () => {
+    autoExecutedRef.current = false;
+    setTransferError(null);
     sinpeMovilTransfer.resetForm();
     resetSinpeMovilTransferState();
     reset2FAState();
@@ -298,13 +331,19 @@ export default function SinpeMovilTransferFlow({ onComplete, onCancel }: SinpeMo
     },
     {
       id: 'verification',
-      title: 'Verificacion de Seguridad',
+      title: operationComplete ? 'Transferencia Completada' : 'Verificacion de Seguridad',
       component: (
-        <View style={styles.verificationContent}>
-          {operationComplete ? (
+        <View style={operationComplete ? styles.stepContent : styles.verificationContent}>
+          {operationComplete && completedTransfer ? (
+            <TransferSuccessStep
+              transfer={completedTransfer}
+              emailDestino={completedEmailDestino}
+            />
+          ) : transferError ? (
             <MessageCard
-              type="success"
-              message="Transferencia SINPE Movil realizada exitosamente"
+              type="error"
+              message="Error en la Transferencia"
+              description={transferError}
               style={[styles.messageCard, { borderColor, backgroundColor: getCardBgColor(colorScheme) }]}
             />
           ) : isProcessing ? (
@@ -339,11 +378,16 @@ export default function SinpeMovilTransferFlow({ onComplete, onCancel }: SinpeMo
           setHas2FAStepBeenInitialized(true);
         }
       },
-      hideNavigation: () => isProcessing || operationComplete,
+      hideNavigation: () => isProcessing,
       fallbackButton: {
         label: 'Cerrar',
-        onPress: handleCancel,
-        show: () => operationComplete,
+        onPress: () => {
+          if (operationComplete && completedTransfer) {
+            onComplete(completedTransfer, completedEmailDestino);
+          }
+          handleCancel();
+        },
+        show: () => operationComplete || !!transferError,
       },
       canGoNext: (): boolean => {
         if (operationComplete) return false;
@@ -372,7 +416,7 @@ export default function SinpeMovilTransferFlow({ onComplete, onCancel }: SinpeMo
     favoriteWallets, isLoadingFavorites,
     currentChallenge, isCreatingChallenge, isValidating, isExecutingOperation,
     validationError, operationError, remainingAttempts, timeRemaining,
-    otpCode, emailCode, operationComplete, isProcessing, colorScheme, borderColor,
+    otpCode, emailCode, operationComplete, isProcessing, transferError, colorScheme, borderColor,
   ]);
 
   return (

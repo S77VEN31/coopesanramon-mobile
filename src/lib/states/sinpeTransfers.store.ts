@@ -4,12 +4,11 @@ import {
   sendTransferenciaSinpe,
   sendTransferenciaCreditosDirectos,
   sendTransferenciaDebitosTiempoReal,
-  TipoDestinoTransferencia,
-  TipoOperacion,
   type EnviarTransferenciaSinpeResponse,
   type EnviarTransferenciaCreditosDirectosResponse,
   type EnviarTransferenciaDebitosTiempoRealResponse,
 } from '../../services/api/transfers.api';
+import { TipoDestinoTransferencia, TipoOperacion } from '../../constants/enums';
 
 interface SinpeTransferResult {
   success: boolean;

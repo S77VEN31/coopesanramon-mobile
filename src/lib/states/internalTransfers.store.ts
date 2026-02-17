@@ -2,10 +2,9 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import {
   sendTransferenciaInterna,
-  TipoDestinoTransferencia,
-  TipoOperacion,
   type EnviarTransferenciaInternaResponse,
 } from '../../services/api/transfers.api';
+import { TipoDestinoTransferencia, TipoOperacion } from '../../constants/enums';
 
 interface TransferResult {
   success: boolean;

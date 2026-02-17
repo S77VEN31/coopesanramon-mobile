@@ -67,7 +67,7 @@ export default function TransfersScreen({ navigation }: Props) {
   return (
     <View style={[styles.container, { backgroundColor }]}>
       <View style={styles.content}>
-        <ContentCard fullHeight>
+        <ContentCard fullHeight disableScroll>
           {!transferType ? (
             <TransferTypeStep
               selectedType={null}

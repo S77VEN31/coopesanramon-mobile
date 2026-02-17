@@ -65,7 +65,6 @@ export function InvestmentSelect({
         <View style={styles.triggerContent}>
           {selectedInvestment ? (
             <View style={styles.selectedInvestment}>
-              <TrendingUp size={16} color="#a61612" />
               <Text style={[styles.selectedText, { color: textColor }]} numberOfLines={1}>
                 {TIPO_INVERSION_LABELS[selectedInvestment.tipoInversion] || 'No Definido'} — No. {selectedInvestment.numeroInversion}
               </Text>

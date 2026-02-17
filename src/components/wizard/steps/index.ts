@@ -7,4 +7,5 @@ export { default as WalletSearchStep } from './WalletSearchStep';
 export { default as FavoriteDataStep } from './FavoriteDataStep';
 export { default as SinpeAccountSearchStep } from './SinpeAccountSearchStep';
 export { default as LocalAccountSearchStep } from './LocalAccountSearchStep';
+export { default as TransferSuccessStep } from './TransferSuccessStep';
 

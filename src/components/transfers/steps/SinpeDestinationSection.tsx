@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
-import { CreditCard, Star, Hash, ArrowUpRight, ArrowDownLeft, Clock, Clock3 } from 'lucide-react-native';
-import { Input } from '@/components/ui/Input';
+import { CreditCard, Star, Hash } from 'lucide-react-native';
+import { IbanInput } from '@/components/ui/IbanInput';
 import { FavoriteAccountSelect } from '@/components/inputs/FavoriteAccountSelect';
 import { getTextColor, getSecondaryTextColor } from '../../../../App';
 import type { CuentaSinpeFavoritaItem } from '@/services/api/favorites.api';
@@ -9,9 +9,6 @@ import type { GetCuentaDestinoSinpeResponse } from '@/services/api/transfers.api
 
 interface SinpeDestinationSectionProps {
   sinpeFlowType: 'enviar-fondos' | 'recibir-fondos';
-  onSinpeFlowTypeChange: (value: 'enviar-fondos' | 'recibir-fondos') => void;
-  sinpeTransferType: 'pagos-inmediatos' | 'creditos-directos' | 'debitos-tiempo-real' | null;
-  onSinpeTransferTypeChange: (value: 'pagos-inmediatos' | 'creditos-directos') => void;
   sinpeDestinationType: 'favorites' | 'manual';
   onSinpeDestinationTypeChange: (value: 'favorites' | 'manual') => void;
   selectedSinpeFavoriteAccount: CuentaSinpeFavoritaItem | null;
@@ -26,24 +23,8 @@ interface SinpeDestinationSectionProps {
   isLoadingFavorites: boolean;
 }
 
-const getInfoBoxMessage = (sinpeTransferType: string | null) => {
-  if (sinpeTransferType === 'pagos-inmediatos') {
-    return 'Los 365 dias del ano con aplicacion inmediata entre las 7:00am y las 10:00pm.';
-  }
-  if (sinpeTransferType === 'creditos-directos') {
-    return 'Lunes a viernes: solicitudes antes de las 2:00pm se acreditan el mismo dia. Despues de las 2:00pm, sabados, domingos y feriados se acreditan el siguiente dia habil.';
-  }
-  if (sinpeTransferType === 'debitos-tiempo-real') {
-    return 'Los 365 dias del ano con aplicacion inmediata entre las 7:00am y las 10:00pm.';
-  }
-  return null;
-};
-
 export default function SinpeDestinationSection({
   sinpeFlowType,
-  onSinpeFlowTypeChange,
-  sinpeTransferType,
-  onSinpeTransferTypeChange,
   sinpeDestinationType,
   onSinpeDestinationTypeChange,
   selectedSinpeFavoriteAccount,
@@ -60,79 +41,12 @@ export default function SinpeDestinationSection({
   const secondaryTextColor = getSecondaryTextColor(colorScheme);
 
   const destinationLabel = sinpeFlowType === 'recibir-fondos'
-    ? 'Cuenta origen del debito'
+    ? 'Cuenta Origen del Debito'
     : 'Cuenta Destino';
 
-  const infoMessage = getInfoBoxMessage(sinpeTransferType);
-
   return (
-    <>
-      {/* SINPE Flow Type Tabs */}
-      <View style={styles.field}>
-        <Text style={[styles.inputLabel, { color: textColor }]}>
-          Tipo de operacion
-        </Text>
-        <View style={styles.tabsContainer}>
-          <TouchableOpacity
-            style={[styles.tab, sinpeFlowType === 'enviar-fondos' && styles.tabActive]}
-            onPress={() => onSinpeFlowTypeChange('enviar-fondos')}
-          >
-            <ArrowUpRight size={16} color={sinpeFlowType === 'enviar-fondos' ? '#a61612' : secondaryTextColor} />
-            <Text style={[styles.tabText, { color: sinpeFlowType === 'enviar-fondos' ? '#a61612' : secondaryTextColor }]}>
-              Enviar fondos
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, sinpeFlowType === 'recibir-fondos' && styles.tabActive]}
-            onPress={() => onSinpeFlowTypeChange('recibir-fondos')}
-          >
-            <ArrowDownLeft size={16} color={sinpeFlowType === 'recibir-fondos' ? '#a61612' : secondaryTextColor} />
-            <Text style={[styles.tabText, { color: sinpeFlowType === 'recibir-fondos' ? '#a61612' : secondaryTextColor }]}>
-              Traer fondos
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Execution Type Tabs (only for enviar-fondos) */}
-      {sinpeFlowType === 'enviar-fondos' && (
-        <View style={styles.field}>
-          <Text style={[styles.inputLabel, { color: textColor }]}>
-            Tipo de ejecucion
-          </Text>
-          <View style={styles.tabsContainer}>
-            <TouchableOpacity
-              style={[styles.tab, sinpeTransferType === 'pagos-inmediatos' && styles.tabActive]}
-              onPress={() => onSinpeTransferTypeChange('pagos-inmediatos')}
-            >
-              <Clock size={16} color={sinpeTransferType === 'pagos-inmediatos' ? '#a61612' : secondaryTextColor} />
-              <Text style={[styles.tabText, { color: sinpeTransferType === 'pagos-inmediatos' ? '#a61612' : secondaryTextColor }]}>
-                Tiempo real
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tab, sinpeTransferType === 'creditos-directos' && styles.tabActive]}
-              onPress={() => onSinpeTransferTypeChange('creditos-directos')}
-            >
-              <Clock3 size={16} color={sinpeTransferType === 'creditos-directos' ? '#a61612' : secondaryTextColor} />
-              <Text style={[styles.tabText, { color: sinpeTransferType === 'creditos-directos' ? '#a61612' : secondaryTextColor }]}>
-                Diferido
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-
-      {/* Info Box */}
-      {sinpeTransferType && infoMessage && (
-        <View style={styles.infoBox}>
-          <Clock size={16} color="#a61612" style={styles.infoBoxIcon} />
-          <Text style={styles.infoBoxText}>{infoMessage}</Text>
-        </View>
-      )}
-
-      {/* Destination Type Tabs */}
-      <View style={styles.field}>
+    <View style={styles.container}>
+      <View>
         <Text style={[styles.inputLabel, { color: textColor }]}>
           {destinationLabel}
         </Text>
@@ -159,59 +73,47 @@ export default function SinpeDestinationSection({
       </View>
 
       {sinpeDestinationType === 'favorites' && (
-        <View style={styles.field}>
-          <FavoriteAccountSelect<CuentaSinpeFavoritaItem>
-            items={sinpeFavoriteAccounts}
-            value={selectedSinpeFavoriteAccount}
-            onSelect={onSinpeFavoriteSelect}
-            placeholder="Seleccionar cuenta favorita"
-            disabled={isLoadingFavorites || sinpeFavoriteAccounts.length === 0}
-            modalTitle="Seleccionar Cuenta Favorita"
-            emptyMessage="No hay cuentas favoritas disponibles"
-            getKey={(item) => item.id?.toString() || item.numeroCuentaDestino || ''}
-            getDisplayText={(item) => item.numeroCuentaDestino || ''}
-            getAlias={(item) => item.alias}
-            getTitular={(item) => item.titularDestino}
-            formatAsIban={true}
-            icon={<CreditCard size={18} />}
-          />
-        </View>
+        <FavoriteAccountSelect<CuentaSinpeFavoritaItem>
+          label="Cuenta Favorita"
+          items={sinpeFavoriteAccounts}
+          value={selectedSinpeFavoriteAccount}
+          onSelect={onSinpeFavoriteSelect}
+          placeholder="Seleccionar cuenta favorita"
+          disabled={isLoadingFavorites || sinpeFavoriteAccounts.length === 0}
+          modalTitle="Seleccionar Cuenta Favorita"
+          emptyMessage="No hay cuentas favoritas disponibles"
+          getKey={(item) => item.id?.toString() || item.numeroCuentaDestino || ''}
+          getDisplayText={(item) => item.numeroCuentaDestino || ''}
+          getAlias={(item) => item.alias}
+          getTitular={(item) => item.titularDestino}
+          formatAsIban={true}
+          icon={<CreditCard size={18} />}
+        />
       )}
 
       {sinpeDestinationType === 'manual' && (
-        <View style={styles.field}>
-          <Text style={[styles.label, { color: textColor }]}>
-            Numero de Cuenta (IBAN)
-          </Text>
-          <Input
-            placeholder="CRXX XXXX XXXX XXXX XXXX XXXX"
-            value={sinpeDestinationIban}
-            onChangeText={onSinpeDestinationIbanChange}
-            keyboardType="default"
-            error={sinpeDestinationFormatError || sinpeAccountValidationError || undefined}
-            leftIcon={<CreditCard size={16} color={secondaryTextColor} />}
-          />
-        </View>
+        <IbanInput
+          label="Numero de Cuenta (IBAN)"
+          placeholder="00 0000 0000 0000 0000 00"
+          value={sinpeDestinationIban}
+          onChangeText={(_masked, unmasked) => onSinpeDestinationIbanChange(unmasked)}
+          onClear={() => onSinpeDestinationIbanChange('')}
+          error={sinpeDestinationFormatError || sinpeAccountValidationError || undefined}
+          colorScheme={colorScheme}
+        />
       )}
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  field: {
-    marginBottom: 12,
+  container: {
+    gap: 16,
   },
   inputLabel: {
     fontSize: 14,
     fontWeight: '500',
-    marginBottom: 8,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginBottom: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    marginBottom: 6,
   },
   tabsContainer: {
     flexDirection: 'row',
@@ -236,26 +138,5 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 14,
     fontWeight: '500',
-  },
-  infoBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: 'rgba(166, 22, 18, 0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(166, 22, 18, 0.2)',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-    gap: 8,
-  },
-  infoBoxIcon: {
-    marginTop: 2,
-    flexShrink: 0,
-  },
-  infoBoxText: {
-    fontSize: 13,
-    color: '#555',
-    lineHeight: 18,
-    flex: 1,
   },
 });
