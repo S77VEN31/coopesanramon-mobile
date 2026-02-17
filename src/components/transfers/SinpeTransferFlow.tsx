@@ -23,7 +23,7 @@ import type { EnviarTransferenciaSinpeResponse, EnviarTransferenciaCreditosDirec
 type SinpeTransferResponse = EnviarTransferenciaSinpeResponse | EnviarTransferenciaCreditosDirectosResponse | EnviarTransferenciaDebitosTiempoRealResponse;
 
 interface SinpeTransferFlowProps {
-  onComplete: (transfer: SinpeTransferResponse, emailDestino: string | null) => void;
+  onComplete: () => void;
   onCancel: () => void;
 }
 
@@ -440,10 +440,7 @@ export default function SinpeTransferFlow({ onComplete, onCancel }: SinpeTransfe
       fallbackButton: {
         label: 'Cerrar',
         onPress: () => {
-          if (operationComplete && completedTransfer) {
-            onComplete(completedTransfer, completedEmailDestino);
-          }
-          handleCancel();
+          onComplete();
         },
         show: () => operationComplete || !!transferError,
       },

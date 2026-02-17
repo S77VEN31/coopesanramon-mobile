@@ -20,7 +20,7 @@ import type { ListFavoriteWalletsResponse } from '@/services/api/favorites.api';
 import type { EnviarSinpeMovilResponse } from '@/services/api/transfers.api';
 
 interface SinpeMovilTransferFlowProps {
-  onComplete: (transfer: EnviarSinpeMovilResponse, emailDestino: string | null) => void;
+  onComplete: () => void;
   onCancel: () => void;
 }
 
@@ -382,10 +382,7 @@ export default function SinpeMovilTransferFlow({ onComplete, onCancel }: SinpeMo
       fallbackButton: {
         label: 'Cerrar',
         onPress: () => {
-          if (operationComplete && completedTransfer) {
-            onComplete(completedTransfer, completedEmailDestino);
-          }
-          handleCancel();
+          onComplete();
         },
         show: () => operationComplete || !!transferError,
       },

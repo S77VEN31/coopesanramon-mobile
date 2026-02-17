@@ -6,20 +6,11 @@ import { MainDrawerParamList } from '@/navigation/types';
 import { getBackgroundColor } from '../../App';
 import ContentCard from '@/components/cards/ContentCard';
 import { TransferTypeStep } from '@/components/wizard/steps';
-import TransferSuccessModal from '@/components/modals/TransferSuccessModal';
 import LocalTransferFlow from '@/components/transfers/LocalTransferFlow';
 import SinpeTransferFlow from '@/components/transfers/SinpeTransferFlow';
 import SinpeMovilTransferFlow from '@/components/transfers/SinpeMovilTransferFlow';
-import type { EnviarTransferenciaInternaResponse, EnviarTransferenciaSinpeResponse, EnviarTransferenciaCreditosDirectosResponse, EnviarTransferenciaDebitosTiempoRealResponse, EnviarSinpeMovilResponse } from '@/services/api/transfers.api';
 
 type TransferType = 'local' | 'sinpe' | 'sinpe-mobile';
-
-type TransferResponse =
-  | EnviarTransferenciaInternaResponse
-  | EnviarTransferenciaSinpeResponse
-  | EnviarTransferenciaCreditosDirectosResponse
-  | EnviarTransferenciaDebitosTiempoRealResponse
-  | EnviarSinpeMovilResponse;
 
 const TRANSFER_TYPE_LABELS: Record<TransferType, string> = {
   local: 'Transferencia Local',
@@ -34,9 +25,6 @@ export default function TransfersScreen({ navigation }: Props) {
   const backgroundColor = getBackgroundColor(colorScheme);
 
   const [transferType, setTransferType] = useState<TransferType | null>(null);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [successTransfer, setSuccessTransfer] = useState<TransferResponse | null>(null);
-  const [successTransferEmailDestino, setSuccessTransferEmailDestino] = useState<string | null>(null);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -51,19 +39,6 @@ export default function TransfersScreen({ navigation }: Props) {
     });
   }, [navigation, transferType]);
 
-  const handleTransferComplete = (transfer: TransferResponse, emailDestino: string | null) => {
-    setSuccessTransfer(transfer);
-    setSuccessTransferEmailDestino(emailDestino);
-    setShowSuccessModal(true);
-  };
-
-  const handleSuccessModalClose = () => {
-    setShowSuccessModal(false);
-    setSuccessTransfer(null);
-    setSuccessTransferEmailDestino(null);
-    setTransferType(null);
-  };
-
   return (
     <View style={[styles.container, { backgroundColor }]}>
       <View style={styles.content}>
@@ -75,29 +50,22 @@ export default function TransfersScreen({ navigation }: Props) {
             />
           ) : transferType === 'local' ? (
             <LocalTransferFlow
-              onComplete={handleTransferComplete}
+              onComplete={() => setTransferType(null)}
               onCancel={() => setTransferType(null)}
             />
           ) : transferType === 'sinpe' ? (
             <SinpeTransferFlow
-              onComplete={handleTransferComplete}
+              onComplete={() => setTransferType(null)}
               onCancel={() => setTransferType(null)}
             />
           ) : (
             <SinpeMovilTransferFlow
-              onComplete={handleTransferComplete}
+              onComplete={() => setTransferType(null)}
               onCancel={() => setTransferType(null)}
             />
           )}
         </ContentCard>
       </View>
-
-      <TransferSuccessModal
-        visible={showSuccessModal}
-        onClose={handleSuccessModalClose}
-        transfer={successTransfer}
-        emailDestino={successTransferEmailDestino}
-      />
     </View>
   );
 }

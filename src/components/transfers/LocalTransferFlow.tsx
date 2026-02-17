@@ -20,7 +20,7 @@ import type { ListInternalFavoriteAccountsResponse } from '@/services/api/favori
 import type { EnviarTransferenciaInternaResponse } from '@/services/api/transfers.api';
 
 interface LocalTransferFlowProps {
-  onComplete: (transfer: EnviarTransferenciaInternaResponse, emailDestino: string | null) => void;
+  onComplete: () => void;
   onCancel: () => void;
 }
 
@@ -452,10 +452,7 @@ export default function LocalTransferFlow({ onComplete, onCancel }: LocalTransfe
       fallbackButton: {
         label: 'Cerrar',
         onPress: () => {
-          if (operationComplete && completedTransfer) {
-            onComplete(completedTransfer, completedEmailDestino);
-          }
-          handleCancel();
+          onComplete();
         },
         show: () => operationComplete || !!transferError,
       },
