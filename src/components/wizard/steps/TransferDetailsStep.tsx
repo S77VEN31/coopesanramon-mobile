@@ -23,6 +23,7 @@ interface TransferDetailsStepProps {
   onEmailChange: (value: string) => void;
   emailError: string | null;
   isEmailRequired?: boolean;
+  showEmail?: boolean;
   sinpeTransferType?: 'pagos-inmediatos' | 'creditos-directos' | 'debitos-tiempo-real' | null;
   onSinpeTransferTypeChange?: (value: 'pagos-inmediatos' | 'creditos-directos') => void;
   sinpeFlowType?: 'enviar-fondos' | 'recibir-fondos';
@@ -40,6 +41,7 @@ export default function TransferDetailsStep({
   onEmailChange,
   emailError,
   isEmailRequired = false,
+  showEmail = true,
   sinpeTransferType,
   onSinpeTransferTypeChange,
   sinpeFlowType,
@@ -157,21 +159,23 @@ export default function TransferDetailsStep({
       </View>
 
       {/* Email */}
-      <Input
-        ref={emailRef}
-        label={isEmailRequired ? 'Correo Electrónico *' : 'Correo Electrónico'}
-        placeholder="ejemplo@correo.com"
-        value={email}
-        onChangeText={onEmailChange}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        returnKeyType="done"
-        leftIcon={<Mail size={16} color={iconColor} />}
-        rightIcon={email ? <X size={18} color={iconColor} /> : undefined}
-        onRightIconPress={() => onEmailChange('')}
-        error={emailError || undefined}
-        colorScheme={colorScheme}
-      />
+      {showEmail && (
+        <Input
+          ref={emailRef}
+          label={isEmailRequired ? 'Correo Electrónico *' : 'Correo Electrónico'}
+          placeholder="ejemplo@correo.com"
+          value={email}
+          onChangeText={onEmailChange}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          returnKeyType="done"
+          leftIcon={<Mail size={16} color={iconColor} />}
+          rightIcon={email ? <X size={18} color={iconColor} /> : undefined}
+          onRightIconPress={() => onEmailChange('')}
+          error={emailError || undefined}
+          colorScheme={colorScheme}
+        />
+      )}
 
       {/* Execution type tabs (SINPE enviar-fondos only) */}
       {transferType === 'sinpe' && sinpeFlowType === 'enviar-fondos' && onSinpeTransferTypeChange && (

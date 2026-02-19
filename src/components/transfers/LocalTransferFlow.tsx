@@ -164,7 +164,7 @@ export default function LocalTransferFlow({ onComplete, onCancel }: LocalTransfe
     if (localTransfer.amountError) return false;
     const descriptionTrimmed = localTransfer.description?.trim() || '';
     if (!descriptionTrimmed || descriptionTrimmed.length < 15 || descriptionTrimmed.length > 255) return false;
-    if (localTransfer.email && !isEmailValid(localTransfer.email)) return false;
+    if (localTransfer.destinationType !== 'own' && localTransfer.email && !isEmailValid(localTransfer.email)) return false;
     return true;
   };
 
@@ -236,7 +236,7 @@ export default function LocalTransferFlow({ onComplete, onCancel }: LocalTransfe
         sourceAccountNumber,
         parsedAmount,
         localTransfer.description || undefined,
-        localTransfer.email || undefined,
+        localTransfer.destinationType !== 'own' ? (localTransfer.email || undefined) : undefined,
         idDesafio,
         localTransfer.destinationType === 'favorites' && localTransfer.selectedFavoriteAccount ? localTransfer.selectedFavoriteAccount.id : undefined,
         destinationAccountNumber
@@ -368,6 +368,7 @@ export default function LocalTransferFlow({ onComplete, onCancel }: LocalTransfe
           onEmailChange={localTransfer.setEmail}
           emailError={localTransfer.emailError}
           isEmailRequired={false}
+          showEmail={localTransfer.destinationType !== 'own'}
         />
       ),
       canGoNext: (): boolean => isTransferDetailsValid(),
@@ -383,9 +384,10 @@ export default function LocalTransferFlow({ onComplete, onCancel }: LocalTransfe
           selectedFavoriteAccount={localTransfer.selectedFavoriteAccount}
           selectedOwnAccount={localTransfer.selectedOwnAccount}
           destinationIban={localTransfer.destinationIban}
+          validatedAccountInfo={localTransfer.validatedAccountInfo}
           amount={localTransfer.amount}
           description={localTransfer.description}
-          email={localTransfer.email}
+          email={localTransfer.destinationType !== 'own' ? localTransfer.email : ''}
         />
       ),
       canGoNext: (): boolean => true,

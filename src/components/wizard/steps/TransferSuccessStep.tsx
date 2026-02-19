@@ -11,6 +11,7 @@ import {
   Calendar,
   Smartphone,
   Receipt,
+  User,
 } from 'lucide-react-native';
 import InfoCard from '../../cards/InfoCard';
 import { getSecondaryTextColor } from '../../../../App';
@@ -87,6 +88,13 @@ export default function TransferSuccessStep({ transfer, emailDestino }: Transfer
         label: 'Cuenta Destino',
         value: formatIBAN(transfer.destino.cuentaIBAN) || transfer.destino.cuentaIBAN,
       });
+      if (transfer.destino.cliente) {
+        accountItems.push({
+          icon: <User />,
+          label: 'Titular Cuenta Destino',
+          value: transfer.destino.cliente.toUpperCase(),
+        });
+      }
     }
   } else if (isSinpeMovil) {
     if (transfer.numeroCuentaOrigen) {
@@ -103,6 +111,13 @@ export default function TransferSuccessStep({ transfer, emailDestino }: Transfer
         value: transfer.monederoDestino,
       });
     }
+    if (transfer.titularDestino) {
+      accountItems.push({
+        icon: <User />,
+        label: 'Titular Destino',
+        value: transfer.titularDestino.toUpperCase(),
+      });
+    }
   } else {
     if (transfer.numeroCuentaOrigen) {
       accountItems.push({
@@ -116,6 +131,13 @@ export default function TransferSuccessStep({ transfer, emailDestino }: Transfer
         icon: <CreditCard />,
         label: 'Cuenta Destino',
         value: formatIBAN(transfer.numeroCuentaDestino) || transfer.numeroCuentaDestino,
+      });
+    }
+    if ('titularDestino' in transfer && transfer.titularDestino) {
+      accountItems.push({
+        icon: <User />,
+        label: 'Titular Cuenta Destino',
+        value: transfer.titularDestino.toUpperCase(),
       });
     }
   }

@@ -388,6 +388,7 @@ export default function SinpeMovilTransferFlow({ onComplete, onCancel }: SinpeMo
       },
       canGoNext: (): boolean => {
         if (operationComplete) return false;
+        if (transferError) return false;
         if (!currentChallenge) return false;
         if (isValidating || isExecutingOperation) return false;
         if (timeRemaining <= 0) return false;

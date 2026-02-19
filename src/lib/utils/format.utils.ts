@@ -52,11 +52,16 @@ export function formatDate(dateString: string): string {
 }
 
 /**
- * Format date-time string for display
+ * Format date-time string for display.
+ * The API returns dates without timezone suffix (local CR time),
+ * so we append the Costa Rica offset to prevent UTC misinterpretation.
  */
 export function formatDateTime(dateString: string): string {
   try {
-    const date = new Date(dateString);
+    const normalized = dateString.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(dateString)
+      ? dateString
+      : dateString + '-06:00';
+    const date = new Date(normalized);
     return date.toLocaleString("es-CR", {
       year: "numeric",
       month: "short",

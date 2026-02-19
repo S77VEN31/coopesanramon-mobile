@@ -31,6 +31,7 @@ interface ConfirmationStepProps {
   selectedFavoriteAccount?: CuentaFavoritaInternaItem | null;
   selectedOwnAccount?: DtoCuenta | null;
   destinationIban?: string;
+  validatedAccountInfo?: { titular?: string | null; identificacion?: string | null } | null;
   // SINPE transfer
   sinpeDestinationType?: 'favorites' | 'manual';
   selectedSinpeFavoriteAccount?: CuentaSinpeFavoritaItem | null;
@@ -60,6 +61,7 @@ export default function ConfirmationStep({
   sinpeMovilDestinationType,
   selectedSinpeMovilFavoriteWallet,
   sinpeMovilPhoneNumber,
+  validatedAccountInfo,
   amount,
   description,
   email,
@@ -84,7 +86,7 @@ export default function ConfirmationStep({
         };
       }
       if (localDestinationType === 'manual' && destinationIban) {
-        return { label: 'Cuenta Destino', account: destinationIban, titular: 'Validado' };
+        return { label: 'Cuenta Destino', account: destinationIban, titular: validatedAccountInfo?.titular || null };
       }
     }
     if (transferType === 'sinpe') {
@@ -146,11 +148,13 @@ export default function ConfirmationStep({
       label: destinationInfo.label,
       value: formatIBAN(destinationInfo.account) || destinationInfo.account,
     });
-    accountItems.push({
-      icon: <User />,
-      label: 'Titular',
-      value: destinationInfo.titular,
-    });
+    if (destinationInfo.titular) {
+      accountItems.push({
+        icon: <User />,
+        label: 'Titular Cuenta Destino',
+        value: destinationInfo.titular,
+      });
+    }
   }
 
   // Build transfer details items

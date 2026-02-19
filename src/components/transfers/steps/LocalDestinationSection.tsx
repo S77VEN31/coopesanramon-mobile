@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, useColorScheme, ActivityIndicator } from 'react-native';
 import { CreditCard, Star, Hash, User } from 'lucide-react-native';
 import { IbanInput } from '@/components/ui/IbanInput';
 import { AccountSelect } from '@/components/inputs/AccountSelect';
@@ -40,7 +40,9 @@ export default function LocalDestinationSection({
   destinationIban,
   onDestinationIbanChange,
   destinationFormatError,
+  isValidatingAccount,
   accountValidationError,
+  validatedAccountInfo,
   isLoadingFavorites,
 }: LocalDestinationSectionProps) {
   const colorScheme = useColorScheme();
@@ -124,15 +126,39 @@ export default function LocalDestinationSection({
       )}
 
       {destinationType === 'manual' && (
-        <IbanInput
-          label="Numero de Cuenta (IBAN)"
-          placeholder="00 0000 0000 0000 0000 00"
-          value={destinationIban}
-          onChangeText={(_masked, unmasked) => onDestinationIbanChange(unmasked)}
-          onClear={() => onDestinationIbanChange('')}
-          error={destinationFormatError || accountValidationError || undefined}
-          colorScheme={colorScheme}
-        />
+        <View style={styles.manualContainer}>
+          <IbanInput
+            label="Numero de Cuenta (IBAN)"
+            placeholder="00 0000 0000 0000 0000 00"
+            value={destinationIban}
+            onChangeText={(_masked, unmasked) => onDestinationIbanChange(unmasked)}
+            onClear={() => onDestinationIbanChange('')}
+            error={destinationFormatError || accountValidationError || undefined}
+            colorScheme={colorScheme}
+          />
+          {isValidatingAccount && (
+            <View style={styles.validationRow}>
+              <ActivityIndicator size="small" color="#a61612" />
+              <Text style={[styles.validatingText, { color: secondaryTextColor }]}>
+                Validando cuenta...
+              </Text>
+            </View>
+          )}
+          {validatedAccountInfo && !isValidatingAccount && (
+            <View style={styles.accountInfoCard}>
+              {validatedAccountInfo.titular && (
+                <Text style={[styles.accountInfoName, { color: textColor }]}>
+                  {validatedAccountInfo.titular}
+                </Text>
+              )}
+              {validatedAccountInfo.identificacion && (
+                <Text style={[styles.accountInfoId, { color: secondaryTextColor }]}>
+                  {validatedAccountInfo.identificacion}
+                </Text>
+              )}
+            </View>
+          )}
+        </View>
       )}
     </View>
   );
@@ -141,6 +167,30 @@ export default function LocalDestinationSection({
 const styles = StyleSheet.create({
   container: {
     gap: 16,
+  },
+  manualContainer: {
+    gap: 8,
+  },
+  validationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 4,
+  },
+  validatingText: {
+    fontSize: 13,
+  },
+  accountInfoCard: {
+    flexDirection: 'column',
+    gap: 2,
+    paddingHorizontal: 4,
+  },
+accountInfoName: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  accountInfoId: {
+    fontSize: 12,
   },
   field: {
     marginBottom: 12,
